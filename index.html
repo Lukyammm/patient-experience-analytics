@@ -110,6 +110,19 @@
     .seg input[value="RUIM"]:checked+label{background:#ef4444;box-shadow:0 1px 3px rgba(239,68,68,.3)}
     .seg input[value="N/A"]:checked+label{background:#6b7280;box-shadow:0 1px 3px rgba(107,114,128,.3)}
 
+    /* ── Escala NPS 0–10 com carinhas ── */
+    .nps{display:flex;gap:5px;flex-wrap:wrap}
+    .nps input{position:absolute;opacity:0;pointer-events:none}
+    .nps label{flex:1;min-width:42px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 6px;border-radius:12px;border:1.5px solid var(--s4);background:var(--s2);color:var(--mut);cursor:pointer;transition:all .15s ease;user-select:none}
+    .nps label svg{transition:transform .15s ease}
+    .nps label:hover{transform:translateY(-2px);border-color:var(--sub);color:var(--sub)}
+    .nps label b{font-size:11px;font-weight:600;letter-spacing:.02em}
+    .nps input:checked+label{transform:translateY(-2px)}
+    .nps input:checked+label svg{transform:scale(1.15)}
+    .nps input:checked+label.nv-d{border-color:#ef4444;color:#ef4444;background:rgba(239,68,68,.07);box-shadow:0 2px 8px rgba(239,68,68,.15)}
+    .nps input:checked+label.nv-n{border-color:#f59e0b;color:#f59e0b;background:rgba(245,158,11,.07);box-shadow:0 2px 8px rgba(245,158,11,.15)}
+    .nps input:checked+label.nv-p{border-color:#22c55e;color:#16a34a;background:rgba(34,197,94,.07);box-shadow:0 2px 8px rgba(34,197,94,.15)}
+
     /* ── Track / progress ── */
     .track{position:relative;height:3px;background:var(--s3);border-radius:99px;margin-top:14px;overflow:visible}
     .track i{display:block;height:100%;border-radius:99px;transition:width .55s cubic-bezier(.4,0,.2,1)}
@@ -433,13 +446,20 @@
             <div><label class="fl">Reclamações</label><textarea id="reclamacoes" class="fta"></textarea></div>
             <div><label class="fl">Comentários</label><textarea id="comentarios" class="fta"></textarea></div>
             <div><label class="fl">Elogios</label><textarea id="elogios" class="fta"></textarea></div>
-            <div>
-              <label class="fl">Recomendação do usuário (0–10)</label>
-              <input id="nps" type="number" min="0" max="10" class="fi" placeholder="0 a 10">
-              <p class="text-[11px] text-mut mt-1.5 leading-relaxed">Pergunte: "De 0 a 10, o quanto você recomendaria o hospital?" O indicador NPS é calculado automaticamente a partir dessas notas.</p>
+            <div style="grid-column:span 2">
+              <label class="fl">Recomendação do usuário · NPS</label>
+              <p class="text-[11px] text-mut mb-2.5 leading-relaxed">"Em uma escala de 0 a 10, o quanto você recomendaria nossa unidade de saúde para um amigo, parente ou familiar?"</p>
+              <input type="hidden" id="nps">
+              <div class="nps" id="npsScale"></div>
+              <div class="flex justify-between mt-2 px-0.5">
+                <span class="text-[10.5px] font-medium" style="color:#ef4444">Detratores · 0–6</span>
+                <span class="text-[10.5px] font-medium" style="color:#f59e0b">Neutros · 7–8</span>
+                <span class="text-[10.5px] font-medium" style="color:#22c55e">Promotores · 9–10</span>
+              </div>
+              <p class="text-[11px] text-mut mt-1.5 leading-relaxed">O indicador NPS é calculado automaticamente a partir dessas notas.</p>
             </div>
             <div><label class="fl">Entrevistador</label><input id="entrevistador" list="entList" class="fi" placeholder="Assistente social"></div>
-            <div style="grid-column:span 2"><label class="fl">Encaminhamentos</label><input id="encaminhamentos" class="fi"></div>
+            <div><label class="fl">Encaminhamentos</label><input id="encaminhamentos" class="fi"></div>
           </div>
         </div>
       </form>
@@ -842,6 +862,26 @@ function buildForm(){
       <div style="margin-top:14px"><label class="fl">Observações</label><textarea id="${obs}" class="fta"></textarea></div>
     </div>`).join('');
 }
+/* ── Escala NPS: carinhas 0–10 (triste 0–6, neutra 7–8, feliz 9–10) ── */
+function npsFace(n){
+  const mouth=n<=6
+    ?'M8.6 16.3c.9-1.6 2-2.4 3.4-2.4s2.5.8 3.4 2.4'
+    :n<=8
+      ?'M8.7 15.3h6.6'
+      :'M8.6 14.2c.9 1.6 2 2.4 3.4 2.4s2.5-.8 3.4-2.4';
+  return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="9.2"/><circle cx="8.8" cy="9.8" r=".4" fill="currentColor" stroke-width="1.6"/><circle cx="15.2" cy="9.8" r=".4" fill="currentColor" stroke-width="1.6"/><path d="${mouth}"/></svg>`;
+}
+function buildNps(){
+  $('npsScale').innerHTML=Array.from({length:11},(_,n)=>{
+    const cls=n<=6?'nv-d':n<=8?'nv-n':'nv-p';
+    return `<input type="radio" name="npsScale" id="nps_${n}" value="${n}"><label for="nps_${n}" class="${cls}">${npsFace(n)}<b>${n}</b></label>`;
+  }).join('');
+  document.querySelectorAll('input[name="npsScale"]').forEach(r=>r.addEventListener('change',function(){$('nps').value=this.value}));
+}
+function syncNps(v){
+  $('nps').value=v??'';
+  document.querySelectorAll('input[name="npsScale"]').forEach(r=>r.checked=String(r.value)===String(v??'__'));
+}
 function markAllOtimo(bi){
   BLOCKS[bi][2].forEach(([f])=>{const el=document.querySelector(`input[name="${f}"][value="ÓTIMO"]`);if(el)el.checked=true});
 }
@@ -851,7 +891,8 @@ function getForm(){
   RF.forEach(f=>{o[f]=document.querySelector(`input[name="${f}"]:checked`)?.value||''});return o;
 }
 function setForm(r={}){
-  ['setor','pront','data','tipo','dn','sexo','nps','obsAcolhimento','obsAssistencia','obsServicos','sugestoes','reclamacoes','comentarios','elogios','entrevistador','encaminhamentos'].forEach(id=>{if($(id))$(id).value=r[id]||''});
+  ['setor','pront','data','tipo','dn','sexo','obsAcolhimento','obsAssistencia','obsServicos','sugestoes','reclamacoes','comentarios','elogios','entrevistador','encaminhamentos'].forEach(id=>{if($(id))$(id).value=r[id]||''});
+  syncNps(r.nps!==''&&r.nps!=null?r.nps:null);
   RF.forEach(f=>{const v=String(r[f]||'ÓTIMO').toUpperCase();const el=document.querySelector(`input[name="${f}"][value="${CSS.escape(v)}"]`)||document.querySelector(`input[name="${f}"]`);if(el)el.checked=true});
   $('rowNumber').value=r.rowNumber||'';
 }
@@ -873,7 +914,7 @@ function saveSaida(e){e.preventDefault();const p={rowNumber:$('sRowNumber').valu
 function editSaida(rn){const s=ST.saidas.find(x=>x.rowNumber===rn);if(!s)return;$('sRowNumber').value=s.rowNumber;$('sMes').value=s.mes;$('sSetor').value=s.setor;$('sSaidas').value=s.saidas;showTab('saidas')}
 function rmSaida(rn){if(!confirm('Excluir?'))return;load(true);google.script.run.withSuccessHandler(res=>{load(false);toast(res.message);reload()}).withFailureHandler(err=>{load(false);toast(err.message||err)}).deleteSaida(rn)}
 function downloadCSV(){google.script.run.withSuccessHandler(csv=>{const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pesquisa_huc.csv';a.click();URL.revokeObjectURL(a.href)}).exportCsv()}
-buildForm();
+buildForm();buildNps();
 // Show cached data immediately while fresh data loads
 try{const c=sessionStorage.getItem('psq');if(c){ST=JSON.parse(c);ST.saidas=ST.saidas||[];ST.cadastros=ST.cadastros||[];ST.lookups.entrevistadores=ST.lookups.entrevistadores||[];hydrate();renderAll()}}catch(e){}
 reload();
