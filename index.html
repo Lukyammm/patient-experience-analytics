@@ -225,7 +225,7 @@
           <circle cx="578" cy="566" r="41.2" fill="#60A5FA"/>
           <circle cx="565.8" cy="551.5" r="8.1" fill="#fff" opacity="0.50"/>
         </svg>
-        <span class="text-[13px] font-bold tracking-tight text-ink">Pesquisa</span>
+        <span class="text-[14px] font-extrabold tracking-tight text-ink" style="letter-spacing:-.3px">Pesquisa</span>
       </div>
 
       <!-- Nav (centered) -->
@@ -516,11 +516,16 @@ function hydrate(){
   const cr=$('repMes').value;
   $('repMes').innerHTML=m.map(x=>`<option value="${x}">${ml(x)}</option>`).join('')||'<option value="">Sem dados</option>';
   if(m.includes(cr))$('repMes').value=cr;
-  const cs=$('gSetor').value;
-  $('gSetor').innerHTML='<option value="">Todos os setores</option>'+ST.lookups.setores.map(v=>`<option>${esc(v)}</option>`).join('');
-  if(ST.lookups.setores.includes(cs))$('gSetor').value=cs;
+  refreshSetores($('gMes').value);
   $('setoresList').innerHTML=ST.lookups.setores.map(v=>`<option value="${esc(v)}"></option>`).join('');
   $('tiposList').innerHTML=(ST.lookups.tipos||[]).map(v=>`<option value="${esc(v)}"></option>`).join('');
+}
+function refreshSetores(mes){
+  const cs=$('gSetor').value;
+  const rr=ST.records.filter(r=>!mes||mo(r)===mes);
+  const sets=[...new Set(rr.map(r=>String(r.setor||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  $('gSetor').innerHTML='<option value="">Todos os setores</option>'+sets.map(v=>`<option>${esc(v)}</option>`).join('');
+  if(sets.includes(cs))$('gSetor').value=cs;
 }
 function rows(mes,setor){return ST.records.filter(r=>(!mes||mo(r)===mes)&&(!setor||r.setor===setor))}
 function saidas(mes,setor){return ST.saidas.filter(s=>(!mes||s.mes===mes)&&(!setor||s.setor===setor)).reduce((t,x)=>t+x.saidas,0)}
@@ -539,7 +544,9 @@ function wp(c){const v=c['ÓTIMO']+c['BOM']+c['REGULAR']+c['RUIM'];if(!v)return 
 const zona=v=>v>=75?'zona de excelência':v>=50?'zona de qualidade':v>=0?'zona de aperfeiçoamento':'zona crítica';
 
 function renderAll(){
-  const mes=$('gMes').value,set=$('gSetor').value;
+  const mes=$('gMes').value;
+  refreshSetores(mes);
+  const set=$('gSetor').value;
   const rr=rows(mes,set),s=sum(rr);
   const sd=saidas(mes,set),ap=sd?s.total/sd*100:null;
   const pv=mes?sum(rows(pm(mes),set)):null;
@@ -568,22 +575,27 @@ function rHist(set){
   const m=allM().slice(-12),el=$('histChart');
   if(m.length<2){el.innerHTML='<div class="empty">Registre dois meses para ver a evolução.</div>';return}
   const sa=[],np=[];m.forEach(x=>{const s=sum(rows(x,set));sa.push(s.sat);np.push(s.nps)});
-  const W=760,H=200,P={l:32,r:42,t:8,b:22};
+  const W=760,H=210,P={l:32,r:48,t:24,b:22};
   const X=i=>P.l+i*(W-P.l-P.r)/(m.length-1);
   const Y=v=>P.t+(100-Math.max(0,Math.min(100,v)))*(H-P.t-P.b)/100;
   let g='';
   [0,25,50,75,100].forEach(v=>{g+=`<line x1="${P.l}" y1="${Y(v)}" x2="${W-P.r}" y2="${Y(v)}" style="stroke:var(--grid)" stroke-width="1"/><text x="${P.l-6}" y="${Y(v)+4}" font-size="9.5" style="fill:var(--gTxt)" text-anchor="end">${v}</text>`});
   g+=`<line x1="${P.l}" y1="${Y(90)}" x2="${W-P.r}" y2="${Y(90)}" style="stroke:var(--gTxt)" stroke-dasharray="3 4" stroke-width="1"/>`;
   m.forEach((x,i)=>{g+=`<text x="${X(i)}" y="${H-4}" font-size="9.5" style="fill:var(--gTxt)" text-anchor="middle">${mc(x)}</text>`});
-  const line=(vals,color)=>{
+  // Determine label placement: if both end values are close, stagger vertically
+  const saLast=[...sa].reverse().find(v=>v!=null)??0;
+  const npLast=[...np].reverse().find(v=>v!=null)??0;
+  const saBelow=saLast>=npLast; // put sa label below when sa >= np (both high → stagger)
+  const line=(vals,color,lblBelow)=>{
     const pts=vals.map((v,i)=>v==null?null:[X(i),Y(v)]);
     let path='',st=false;pts.forEach(p=>{if(!p){st=false;return}path+=(st?'L':'M')+p[0]+' '+p[1]+' ';st=true});
     const dots=pts.map((p,i)=>p?`<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="${color}"><title>${ml(m[i])}: ${fmt(vals[i],1)}</title></circle>`:'').join('');
     const last=[...pts].reverse().find(Boolean),lv=[...vals].reverse().find(v=>v!=null);
-    const lbl=last?`<text x="${Math.min(last[0]+6,W-4)}" y="${last[1]-7}" font-size="10.5" font-weight="700" style="fill:${color}">${fmt(lv,0)}</text>`:'';
+    const lblY=last?(lblBelow?last[1]+13:Math.max(P.t+10,last[1]-7)):0;
+    const lbl=last?`<text x="${Math.min(last[0]+6,W-6)}" y="${lblY}" font-size="10.5" font-weight="700" style="fill:${color}">${fmt(lv,0)}</text>`:'';
     return`<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`+dots+lbl;
   };
-  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">${g}${line(sa,'#3b82f6')}${line(np,'#a78bfa')}</svg>`;
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">${g}${line(sa,'#3b82f6',saBelow)}${line(np,'#a78bfa',!saBelow)}</svg>`;
 }
 function rDist(s){
   const tot=s.ot+s.bo+s.re+s.ru+s.na;
@@ -698,14 +710,27 @@ function setForm(r={}){
   RF.forEach(f=>{const v=String(r[f]||'ÓTIMO').toUpperCase();const el=document.querySelector(`input[name="${f}"][value="${CSS.escape(v)}"]`)||document.querySelector(`input[name="${f}"]`);if(el)el.checked=true});
   $('rowNumber').value=r.rowNumber||'';
 }
-function reload(){load(true);google.script.run.withSuccessHandler(data=>{ST=data;ST.saidas=ST.saidas||[];hydrate();renderAll();load(false)}).withFailureHandler(err=>{load(false);toast(err.message||err)}).getInitialData()}
+function reload(){
+  load(true);
+  google.script.run
+    .withSuccessHandler(data=>{
+      ST=data;ST.saidas=ST.saidas||[];
+      try{sessionStorage.setItem('psq',JSON.stringify(ST))}catch(e){}
+      hydrate();renderAll();load(false);
+    })
+    .withFailureHandler(err=>{load(false);toast(err.message||err)})
+    .getInitialData();
+}
 function saveRecord(e){e.preventDefault();load(true);google.script.run.withSuccessHandler(res=>{load(false);toast(res.message);setForm({});reload();showTab('registros')}).withFailureHandler(err=>{load(false);toast(err.message||err)}).saveRecord(getForm())}
 function editRecord(rn){const r=ST.records.find(x=>x.rowNumber===rn);if(!r)return;setForm(r);showTab('novo')}
 function saveSaida(e){e.preventDefault();const p={rowNumber:$('sRowNumber').value,mes:$('sMes').value,setor:$('sSetor').value.trim(),saidas:$('sSaidas').value};if(!p.mes||!p.setor)return toast('Informe mês e setor.');load(true);google.script.run.withSuccessHandler(res=>{load(false);toast(res.message);$('sRowNumber').value='';$('formSaida').reset();reload()}).withFailureHandler(err=>{load(false);toast(err.message||err)}).saveSaida(p)}
 function editSaida(rn){const s=ST.saidas.find(x=>x.rowNumber===rn);if(!s)return;$('sRowNumber').value=s.rowNumber;$('sMes').value=s.mes;$('sSetor').value=s.setor;$('sSaidas').value=s.saidas;showTab('saidas')}
 function rmSaida(rn){if(!confirm('Excluir?'))return;load(true);google.script.run.withSuccessHandler(res=>{load(false);toast(res.message);reload()}).withFailureHandler(err=>{load(false);toast(err.message||err)}).deleteSaida(rn)}
 function downloadCSV(){google.script.run.withSuccessHandler(csv=>{const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pesquisa_huc.csv';a.click();URL.revokeObjectURL(a.href)}).exportCsv()}
-buildForm();reload();
+buildForm();
+// Show cached data immediately while fresh data loads
+try{const c=sessionStorage.getItem('psq');if(c){ST=JSON.parse(c);ST.saidas=ST.saidas||[];hydrate();renderAll()}}catch(e){}
+reload();
 </script>
 </body>
 </html>
