@@ -50,6 +50,11 @@
       --p-ok:#86efac; --p-w:#fcd34d; --p-bd:#fca5a5;
       --du:#86efac; --dd:#fca5a5;
       --t-rc:#fca5a5; --t-sg:#fcd34d; --t-el:#86efac;
+      --shadow-sm:none;
+      --shadow-md:none;
+      --p-ok-bg:rgba(134,239,172,.12);
+      --p-w-bg:rgba(252,211,77,.12);
+      --p-bd-bg:rgba(252,165,165,.12);
     }
   </style>
   <style type="text/tailwindcss">
@@ -166,7 +171,15 @@
       .g-form{grid-template-columns:1fr 1fr!important}
       .g-rates{grid-template-columns:1fr!important}
     }
-    @media(max-width:640px){.g4{grid-template-columns:1fr!important}}
+    @media(max-width:768px){
+      .g4{grid-template-columns:1fr 1fr!important}
+      .g-form{grid-template-columns:1fr 1fr!important}
+      .g-rates{grid-template-columns:1fr!important}
+    }
+    @media(max-width:640px){
+      .g4{grid-template-columns:1fr!important}
+      .g-form{grid-template-columns:1fr!important}
+    }
     @media print{
       header,.no-print{display:none!important}
       body{background:#fff!important;color:#000!important}
