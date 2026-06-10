@@ -1,6 +1,8 @@
 const SHEET_NAME = 'MATRIZ';
 const FIRST_DATA_ROW = 5;
 const LAST_COL = 43; // A:AQ
+const SAIDAS_SHEET = 'SAIDAS';
+const SAIDAS_FIRST_ROW = 2;
 
 const COL = {
   setor:1, pront:2, data:3, tipo:4, dn:5, idade:6, sexo:7,
@@ -34,12 +36,47 @@ function getInitialData() {
 
   return {
     records,
+    saidas: getSaidas(),
     lookups: {
       setores: unique_(records.map(r => r.setor)),
       tipos: unique_(records.map(r => r.tipo)),
       sexos: unique_(records.map(r => r.sexo))
     }
   };
+}
+
+function getSaidas() {
+  const sheet = getSaidasSheet_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < SAIDAS_FIRST_ROW) return [];
+  return sheet.getRange(SAIDAS_FIRST_ROW, 1, lastRow - SAIDAS_FIRST_ROW + 1, 3).getDisplayValues()
+    .map((row, i) => ({ rowNumber: SAIDAS_FIRST_ROW + i, mes: String(row[0] || '').trim(), setor: String(row[1] || '').trim(), saidas: Number(row[2]) || 0 }))
+    .filter(s => s.mes || s.setor);
+}
+
+function saveSaida(payload) {
+  const sheet = getSaidasSheet_();
+  const rowNumber = Number(payload.rowNumber) || sheet.getLastRow() + 1;
+  sheet.getRange(rowNumber, 1, 1, 3).setValues([[payload.mes || '', payload.setor || '', Number(payload.saidas) || 0]]);
+  return { ok: true, rowNumber, message: Number(payload.rowNumber) ? 'Saídas atualizadas.' : 'Saídas registradas.' };
+}
+
+function deleteSaida(rowNumber) {
+  rowNumber = Number(rowNumber);
+  if (!rowNumber || rowNumber < SAIDAS_FIRST_ROW) throw new Error('Linha inválida.');
+  getSaidasSheet_().deleteRow(rowNumber);
+  return { ok: true, message: 'Registro de saídas excluído.' };
+}
+
+function getSaidasSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SAIDAS_SHEET);
+  if (!sheet) sheet = ss.insertSheet(SAIDAS_SHEET);
+  if (sheet.getRange('A1').getValue() !== 'MÊS/ANO') {
+    sheet.getRange(1, 1, 1, 3).setValues([['MÊS/ANO', 'SETOR', 'SAÍDAS']]).setFontWeight('bold').setBackground('#eaf2ff');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
 }
 
 function saveRecord(payload) {
