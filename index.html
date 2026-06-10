@@ -4,600 +4,582 @@
   <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HUC · Pesquisa de Satisfação</title>
+  <title>Pesquisa · HUC</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        fontFamily: { sans: ['Inter','system-ui','-apple-system','sans-serif'] },
+        extend: {
+          colors: {
+            s1:'#212121', s2:'#2f2f2f', s3:'#3a3a3a', s4:'#4a4a4a',
+            ink:'#ececec', sub:'#b4b4b4', mut:'#8e8ea0'
+          }
+        }
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer components {
+      .ctl    { @apply bg-s3 border border-s4 rounded-lg px-3 py-1.5 text-sm text-ink outline-none focus:border-blue-500 transition-colors; }
+      .card   { @apply bg-s2 border border-s4 rounded-2xl p-5; }
+      .btn    { @apply border border-s4 bg-s2 rounded-lg px-3 py-1.5 text-sm font-semibold text-sub hover:bg-s3 hover:text-ink transition; }
+      .btn-p  { @apply rounded-lg px-3 py-1.5 text-sm font-semibold bg-blue-600 text-white hover:bg-blue-500 transition; }
+      .nav-b  { @apply px-3 py-1.5 rounded-lg text-sm font-medium text-mut hover:text-ink hover:bg-s3 transition; }
+      .nav-b.active { @apply bg-s3 text-ink font-semibold; }
+      .fl     { @apply block text-xs font-bold uppercase tracking-wider text-mut mb-1.5; }
+      .fi     { @apply w-full bg-s3 border border-s4 rounded-xl px-3 py-2.5 text-sm text-ink outline-none focus:border-blue-500 transition-colors placeholder:text-mut; }
+      .fta    { @apply w-full bg-s3 border border-s4 rounded-xl px-3 py-2.5 text-sm text-ink outline-none focus:border-blue-500 transition-colors resize-y; min-height:72px; }
+      .ph     { @apply flex items-baseline justify-between gap-3 mb-5 flex-wrap; }
+      .pt     { @apply text-2xl font-extrabold tracking-tight; }
+      .ch3    { @apply text-sm font-bold text-ink; }
+      .ch3s   { @apply text-xs text-mut mt-0.5; }
+      .section{ @apply hidden; }
+      .section.active { @apply block; animation: fade .2s ease; }
+    }
+    @keyframes fade { from { opacity:0; transform:translateY(4px) } to { opacity:1 } }
+  </style>
   <style>
-    :root{
-      --ink:#0b1220;--mut:#667085;--soft:#98a2b3;--line:#e7eaf0;--bg:#f6f7f9;--card:#ffffff;
-      --accent:#1a56db;--accent-soft:#eef3fe;
-      --ok:#047857;--ok-bg:#ecfdf3;--warn:#b45309;--warn-bg:#fffaeb;--bad:#b91c1c;--bad-bg:#fef3f2;
-      --r:14px;
-    }
-    *{box-sizing:border-box}
-    html{-webkit-font-smoothing:antialiased}
-    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5}
-    button,input,select,textarea{font:inherit;color:inherit}
-    button{cursor:pointer;border:0;background:none}
-    .num{font-variant-numeric:tabular-nums}
-
-    /* ── Header ─────────────────────────────── */
-    .top{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
-    .top-in{max-width:1240px;margin:0 auto;padding:0 28px;height:62px;display:flex;align-items:center;gap:22px}
-    .brand{display:flex;align-items:center;gap:11px;white-space:nowrap}
-    .brand .mark{width:30px;height:30px;border-radius:9px;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px}
-    .brand b{font-size:14.5px;letter-spacing:-.01em}
-    .brand small{display:block;font-size:11px;color:var(--mut);font-weight:500;margin-top:-2px}
-    .nav{display:flex;gap:2px;margin:0 auto}
-    .nav button{padding:8px 13px;border-radius:9px;font-size:13.5px;font-weight:500;color:var(--mut)}
-    .nav button:hover{color:var(--ink);background:#f1f3f6}
-    .nav button.active{color:var(--ink);background:#eef0f4;font-weight:600}
-    .top-act{display:flex;gap:8px;align-items:center}
-    .ctl{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 11px;font-size:13px;font-weight:500;outline:none}
-    .ctl:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,86,219,.12)}
-    .btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 13px;font-size:13px;font-weight:600;transition:.15s}
-    .btn:hover{border-color:#cdd3dd}
-    .btn.pri{background:var(--ink);color:#fff;border-color:var(--ink)}
-    .btn.pri:hover{background:#1c2840}
-
-    .wrap{max-width:1240px;margin:0 auto;padding:26px 28px 60px}
-    .section{display:none}.section.active{display:block;animation:fade .25s ease}
-    @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
-    .page-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin:2px 0 20px;flex-wrap:wrap}
-    .page-head h2{margin:0;font-size:21px;font-weight:700;letter-spacing:-.02em}
-    .page-head p{margin:0;color:var(--mut);font-size:13px}
-
-    /* ── Cards / grid ───────────────────────── */
-    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px}
-    .grid{display:grid;gap:14px}
-    .g4{grid-template-columns:repeat(4,1fr)}
-    .g84{grid-template-columns:2fr 1fr}
-    .g48{grid-template-columns:1fr 2fr}
-    .card h3{margin:0 0 4px;font-size:14px;font-weight:600}
-    .card .sub{color:var(--mut);font-size:12px;margin:0 0 14px}
-
-    /* ── KPI ────────────────────────────────── */
-    .kpi-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
-    .kpi-label{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--soft)}
-    .pill{font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;white-space:nowrap}
-    .pill.ok{background:var(--ok-bg);color:var(--ok)}
-    .pill.bad{background:var(--bad-bg);color:var(--bad)}
-    .pill.warn{background:var(--warn-bg);color:var(--warn)}
-    .pill.mut{background:#f1f3f6;color:var(--mut)}
-    .kpi-value{font-size:31px;font-weight:800;letter-spacing:-.03em;margin:10px 0 2px}
-    .kpi-foot{font-size:12px;color:var(--mut);min-height:18px}
-    .delta-up{color:var(--ok);font-weight:700}
-    .delta-down{color:var(--bad);font-weight:700}
-    .track{position:relative;height:5px;background:#eef0f4;border-radius:99px;margin-top:12px;overflow:visible}
-    .track i{display:block;height:100%;border-radius:99px;background:var(--ink);transition:width .5s ease}
-    .track i.ok{background:var(--ok)} .track i.bad{background:var(--bad)} .track i.warn{background:var(--warn)}
-    .track b{position:absolute;top:-3.5px;width:2px;height:12px;background:var(--ink);opacity:.45;border-radius:2px}
-
-    /* ── Charts ─────────────────────────────── */
+    *{box-sizing:border-box}html{-webkit-font-smoothing:antialiased}body{font-variant-numeric:tabular-nums}
+    ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:#2f2f2f}::-webkit-scrollbar-thumb{background:#555;border-radius:99px}
+    .loading{opacity:.4;pointer-events:none}
     svg text{font-family:Inter,sans-serif}
-    .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-top:8px}
-    .legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:-1px}
-    .stack{display:flex;height:12px;border-radius:99px;overflow:hidden;margin:14px 0 16px;background:#eef0f4}
-    .stack i{height:100%}
-    .dist{display:grid;gap:9px}
-    .dist-row{display:grid;grid-template-columns:64px 1fr auto auto;gap:12px;align-items:center;font-size:13px}
-    .dist-row .bar{height:6px;background:#eef0f4;border-radius:99px;overflow:hidden}
-    .dist-row .bar i{display:block;height:100%;border-radius:99px}
-    .dist-row .pc{color:var(--mut);font-size:12px;width:48px;text-align:right}
-    .c-otimo{background:#047857}.c-bom{background:#34d399}.c-regular{background:#fbbf24}.c-ruim{background:#ef4444}.c-na{background:#cbd5e1}
-
-    /* ── Tables ─────────────────────────────── */
-    .tbl{width:100%;border-collapse:collapse}
-    .tbl th{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
-    .tbl td{padding:11px 10px;border-bottom:1px solid #f0f2f5;font-size:13.5px;vertical-align:middle}
-    .tbl tr:last-child td{border-bottom:0}
-    .tbl tr:hover td{background:#fafbfc}
-    .dot{display:inline-block;width:8px;height:8px;border-radius:99px;margin-right:8px;vertical-align:0}
-    .dot.ok{background:var(--ok)}.dot.warn{background:#f59e0b}.dot.bad{background:var(--bad)}.dot.mut{background:#d0d5dd}
-    .mini-bar{display:inline-block;width:74px;height:5px;background:#eef0f4;border-radius:99px;overflow:hidden;margin-right:9px;vertical-align:2px}
-    .mini-bar i{display:block;height:100%;border-radius:99px;background:var(--ink)}
-    .empty{text-align:center;color:var(--soft);padding:34px 10px;font-size:13px}
-
-    /* ── Manifestações ──────────────────────── */
-    .manif-list{display:grid;gap:10px}
-    .manif-item{display:flex;gap:12px;align-items:flex-start;padding:13px 15px;border:1px solid var(--line);border-radius:12px}
-    .tag{font-size:10.5px;font-weight:800;letter-spacing:.05em;padding:3px 8px;border-radius:6px;white-space:nowrap;margin-top:1px}
-    .tag.rec{background:var(--bad-bg);color:var(--bad)}
-    .tag.sug{background:var(--warn-bg);color:var(--warn)}
-    .tag.elo{background:var(--ok-bg);color:var(--ok)}
-    .tag.com{background:#f1f3f6;color:var(--mut)}
-    .manif-item p{margin:0;font-size:13.5px}
-    .manif-item small{color:var(--soft);font-size:11.5px;display:block;margin-top:3px}
-
-    /* ── Forms ──────────────────────────────── */
-    .fgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-    .span2{grid-column:span 2}.span4{grid-column:1/-1}
-    .field label{display:block;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--mut);margin:0 0 6px}
-    .field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 12px;outline:none;transition:.15s}
-    .field textarea{min-height:76px;resize:vertical}
-    .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,86,219,.12)}
-    .rate-block{border:1px solid var(--line);border-radius:12px;padding:16px;background:#fcfcfd}
-    .rate-block h4{margin:0 0 12px;font-size:13px;font-weight:700}
-    .rate-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f0f2f5;flex-wrap:wrap}
-    .rate-row:last-child{border-bottom:0}
-    .rate-row span{font-size:13px}
-    .seg{display:flex;gap:4px}
+    /* Segmented radio */
+    .seg{display:flex;gap:4px;flex-wrap:wrap}
     .seg input{position:absolute;opacity:0;pointer-events:none}
-    .seg label{padding:5px 9px;border:1px solid var(--line);border-radius:8px;font-size:11.5px;font-weight:600;color:var(--mut);cursor:pointer;transition:.12s;user-select:none}
-    .seg label:hover{border-color:#cdd3dd}
-    .seg input:checked+label{background:var(--ink);color:#fff;border-color:var(--ink)}
-    .seg input:focus-visible+label{box-shadow:0 0 0 3px rgba(26,86,219,.25)}
-
-    /* ── Relatório ──────────────────────────── */
-    .report{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:46px 52px;max-width:880px;margin:0 auto}
-    .report h2{text-align:center;font-size:17px;margin:0 0 22px;text-transform:uppercase;letter-spacing:.02em}
-    .report h3{font-size:14px;margin:34px 0 10px;text-transform:uppercase;border-bottom:2px solid var(--ink);padding-bottom:6px;letter-spacing:.02em}
-    .report h4{font-size:12px;margin:18px 0 8px;text-transform:uppercase;letter-spacing:.05em}
-    .report p{font-size:13px;line-height:1.7;text-align:justify}
-    .report table{width:100%;border-collapse:collapse;margin-bottom:14px}
-    .report th,.report td{border:1px solid #cbd5e1;padding:6px 9px;font-size:12px}
-    .report th{background:#f1f3f6;text-align:center;font-weight:700}
-    .report td.c{text-align:center}
-    .report .pct-bad{background:var(--bad-bg)}.report .pct-warn{background:var(--warn-bg)}
-    .report .mn{font-size:12.5px;margin:4px 0;line-height:1.6}
-    .report .mn b{text-transform:uppercase}
-    .footnote{color:var(--mut);font-size:11px}
-
-    .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,12px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:11px;font-size:13px;font-weight:500;opacity:0;transition:.25s;z-index:60;box-shadow:0 12px 32px rgba(11,18,32,.25)}
-    .toast.show{opacity:1;transform:translate(-50%,0)}
-    .loading{opacity:.5;pointer-events:none}
-
+    .seg label{padding:4px 9px;border:1px solid #4a4a4a;border-radius:8px;font-size:11.5px;font-weight:600;color:#8e8ea0;cursor:pointer;transition:.12s;user-select:none;background:#3a3a3a}
+    .seg label:hover{border-color:#737373;color:#d1d5db}
+    .seg input:checked+label{background:#2563eb;color:#fff;border-color:#2563eb}
+    /* Progress tracks */
+    .track{position:relative;height:4px;background:#3a3a3a;border-radius:99px;margin-top:12px;overflow:visible}
+    .track i{display:block;height:100%;border-radius:99px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+    .track b{position:absolute;top:-4px;width:2px;height:12px;border-radius:2px;background:#555}
+    /* Mini bar inline */
+    .mbar{display:inline-block;width:52px;height:4px;background:#3a3a3a;border-radius:99px;overflow:hidden;margin-right:7px;vertical-align:2px}
+    .mbar i{display:block;height:100%;border-radius:99px;background:#ececec}
+    /* Stack bar */
+    .sbar{display:flex;height:9px;border-radius:99px;overflow:hidden;background:#3a3a3a;margin:12px 0 16px}
+    .sbar span{height:100%}
+    /* Dist rows */
+    .drow{display:grid;grid-template-columns:64px 1fr 38px 52px;gap:10px;align-items:center;font-size:13px;margin-bottom:8px}
+    .dbar{height:4px;background:#3a3a3a;border-radius:99px;overflow:hidden}
+    .dbar span{display:block;height:100%;border-radius:99px}
+    .c-o{background:#22c55e}.c-b{background:#86efac}.c-r{background:#f59e0b}.c-ru{background:#ef4444}.c-n{background:#6b7280}
+    /* Pills */
+    .pill{display:inline-flex;align-items:center;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap}
+    .p-ok{background:rgba(34,197,94,.15);color:#86efac}
+    .p-w{background:rgba(245,158,11,.15);color:#fcd34d}
+    .p-bd{background:rgba(239,68,68,.15);color:#fca5a5}
+    .p-mt{background:#3a3a3a;color:#8e8ea0}
+    /* Dots */
+    .dot{display:inline-block;width:7px;height:7px;border-radius:99px;margin-right:7px;vertical-align:1px}
+    .d-ok{background:#22c55e}.d-w{background:#f59e0b}.d-bd{background:#ef4444}.d-mt{background:#555}
+    /* Tags */
+    .tag{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap}
+    .t-rc{background:rgba(239,68,68,.15);color:#fca5a5}
+    .t-sg{background:rgba(245,158,11,.12);color:#fcd34d}
+    .t-el{background:rgba(34,197,94,.12);color:#86efac}
+    .t-cm{background:#3a3a3a;color:#8e8ea0}
+    /* Deltas */
+    .du{color:#86efac;font-weight:700}.dd{color:#fca5a5;font-weight:700}
+    /* Tables */
+    .tbl{width:100%;border-collapse:collapse}
+    .tbl th{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8e8ea0;padding:10px 12px;border-bottom:1px solid #4a4a4a;text-align:left}
+    .tbl td{padding:11px 12px;border-bottom:1px solid rgba(74,74,74,.4);font-size:13.5px;vertical-align:middle}
+    .tbl tr:last-child td{border-bottom:0}
+    .tbl tr:hover td{background:rgba(58,58,58,.4)}
+    /* Report */
+    .rpt h2{text-align:center;font-size:17px;margin:0 0 20px;text-transform:uppercase;letter-spacing:.02em;color:#ececec}
+    .rpt h3{font-size:14px;margin:32px 0 10px;text-transform:uppercase;border-bottom:2px solid #4a4a4a;padding-bottom:6px;letter-spacing:.02em;color:#ececec}
+    .rpt h4{font-size:12px;margin:18px 0 8px;text-transform:uppercase;letter-spacing:.05em;color:#b4b4b4}
+    .rpt p{font-size:13px;line-height:1.7;text-align:justify;color:#b4b4b4}
+    .rpt table{width:100%;border-collapse:collapse;margin-bottom:14px}
+    .rpt th,.rpt td{border:1px solid #4a4a4a;padding:6px 9px;font-size:12px}
+    .rpt th{background:#3a3a3a;text-align:center;font-weight:700;color:#ececec}
+    .rpt td{color:#b4b4b4}.rpt td.c{text-align:center}
+    .pbd{background:rgba(239,68,68,.12)}.pwn{background:rgba(245,158,11,.08)}
+    .rpt .mn{font-size:13px;margin:4px 0;line-height:1.6;color:#b4b4b4}
+    .rpt .mn b{text-transform:uppercase;color:#ececec}
+    .fn{color:#8e8ea0;font-size:11px}
+    .empty{text-align:center;color:#8e8ea0;padding:32px 10px;font-size:13px}
+    /* Toast */
+    .toast-on{opacity:1!important;transform:translate(-50%,0)!important}
     @media(max-width:1080px){
-      .g4{grid-template-columns:repeat(2,1fr)} .g84,.g48{grid-template-columns:1fr}
-      .top-in{flex-wrap:wrap;height:auto;padding:10px 16px;gap:10px}
-      .nav{order:3;width:100%;overflow:auto}
-      .wrap{padding:18px 16px 50px}
-      .fgrid{grid-template-columns:1fr 1fr}.span2{grid-column:1/-1}
-      .report{padding:24px}
+      .g4{grid-template-columns:1fr 1fr!important}
+      .g-hs,.g-nps{grid-template-columns:1fr!important}
+      .g-form{grid-template-columns:1fr 1fr!important}
+      .g-rates{grid-template-columns:1fr!important}
     }
-    @media(max-width:640px){.g4{grid-template-columns:1fr}.fgrid{grid-template-columns:1fr}}
+    @media(max-width:640px){.g4{grid-template-columns:1fr!important}}
     @media print{
-      body{background:#fff}
-      .top,.no-print,.toast{display:none!important}
-      .wrap{max-width:none;padding:0}
-      .section{display:none}.section.active{display:block;animation:none}
-      .report{border:0;border-radius:0;padding:0;max-width:none}
-      .report table{page-break-inside:avoid}
-      .report h3{page-break-after:avoid}
+      header,.no-print{display:none!important}
+      body{background:#fff!important;color:#000!important}
+      .section{display:none!important}.section.active{display:block!important;animation:none!important}
+      .rpt{color:#000!important;background:#fff!important;padding:0!important;border:0!important;border-radius:0!important;max-width:none!important}
+      .rpt *{color:#000!important;border-color:#9ca3af!important}
+      .rpt th{background:#e5e7eb!important}
+      .rpt table{page-break-inside:avoid}.rpt h3{page-break-after:avoid;border-color:#000!important}
     }
   </style>
 </head>
-<body>
-  <header class="top">
-    <div class="top-in">
-      <div class="brand"><div class="mark">H</div><div><b>HUC</b><small>Pesquisa de Satisfação</small></div></div>
-      <nav class="nav">
-        <button class="active" data-tab="overview">Visão geral</button>
-        <button data-tab="novo">Nova pesquisa</button>
-        <button data-tab="registros">Registros</button>
-        <button data-tab="saidas">Saídas</button>
-        <button data-tab="relatorio">Relatório</button>
+<body class="bg-s1 text-ink font-sans min-h-screen">
+
+  <!-- ── HEADER ─────────────────────────────────── -->
+  <header class="sticky top-0 z-30 bg-s2/90 backdrop-blur-md border-b border-s4 no-print">
+    <div class="max-w-[1320px] mx-auto px-6 h-14 flex items-center gap-5">
+
+      <!-- Brand (icon dark inline) -->
+      <div class="flex items-center gap-2.5 shrink-0">
+        <svg width="28" height="28" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+          <rect width="1024" height="1024" rx="220" fill="#3a3a3a"/>
+          <circle cx="322" cy="310" r="29" fill="#475569" opacity="0.78"/>
+          <circle cx="450" cy="310" r="29" fill="#475569" opacity="0.58"/>
+          <circle cx="578" cy="310" r="29" fill="#475569" opacity="0.78"/>
+          <circle cx="706" cy="310" r="29" fill="#475569" opacity="0.58"/>
+          <circle cx="322" cy="438" r="29" fill="#475569" opacity="0.58"/>
+          <circle cx="450" cy="438" r="29" fill="#475569" opacity="0.78"/>
+          <circle cx="578" cy="438" r="29" fill="#475569" opacity="0.58"/>
+          <circle cx="706" cy="438" r="29" fill="#475569" opacity="0.78"/>
+          <circle cx="322" cy="566" r="29" fill="#475569" opacity="0.78"/>
+          <circle cx="450" cy="566" r="29" fill="#475569" opacity="0.58"/>
+          <circle cx="706" cy="566" r="29" fill="#475569" opacity="0.58"/>
+          <circle cx="322" cy="694" r="29" fill="#475569" opacity="0.58"/>
+          <circle cx="450" cy="694" r="29" fill="#475569" opacity="0.78"/>
+          <circle cx="578" cy="694" r="29" fill="#475569" opacity="0.58"/>
+          <circle cx="706" cy="694" r="29" fill="#475569" opacity="0.78"/>
+          <circle cx="578" cy="574" r="59.4" fill="#000" opacity="0.12"/>
+          <circle cx="578" cy="566" r="62.3" fill="#1E40AF" opacity="0.58"/>
+          <circle cx="578" cy="566" r="41.2" fill="#60A5FA"/>
+          <circle cx="565.8" cy="551.5" r="8.1" fill="#fff" opacity="0.50"/>
+        </svg>
+        <span class="text-sm font-extrabold tracking-tight">Pesquisa</span>
+      </div>
+
+      <!-- Nav -->
+      <nav class="flex gap-1 mx-auto overflow-x-auto">
+        <button class="nav-b active" data-tab="overview">Visão geral</button>
+        <button class="nav-b" data-tab="novo">Nova pesquisa</button>
+        <button class="nav-b" data-tab="registros">Registros</button>
+        <button class="nav-b" data-tab="saidas">Saídas</button>
+        <button class="nav-b" data-tab="relatorio">Relatório</button>
       </nav>
-      <div class="top-act no-print">
-        <select id="gMes" class="ctl" onchange="renderAll()"></select>
-        <select id="gSetor" class="ctl" onchange="renderAll()"><option value="">Todos os setores</option></select>
-        <button class="btn" onclick="reload()" title="Atualizar dados">↻</button>
-        <button class="btn pri" onclick="showTab('novo')">+ Pesquisa</button>
+
+      <!-- Controls -->
+      <div class="flex items-center gap-2 shrink-0">
+        <select id="gMes"   onchange="renderAll()" class="ctl"><option value="">Todos os meses</option></select>
+        <select id="gSetor" onchange="renderAll()" class="ctl"><option value="">Todos os setores</option></select>
+        <button onclick="reload()" class="ctl px-3" title="Atualizar">↻</button>
+        <button onclick="showTab('novo')" class="btn-p">+ Pesquisa</button>
       </div>
     </div>
   </header>
 
-  <div class="wrap" id="app">
+  <div id="app" class="max-w-[1320px] mx-auto px-6 py-7 pb-16">
 
-    <!-- ════ VISÃO GERAL ════ -->
+    <!-- ══ VISÃO GERAL ══════════════════════════════ -->
     <section id="overview" class="section active">
-      <div class="page-head">
-        <div><h2 id="ovTitle">Visão geral</h2><p id="ovSub">Indicadores do período · metas: 60% de aplicação · 90% de satisfação</p></div>
-        <button class="btn" onclick="downloadCSV()">Exportar CSV</button>
+      <div class="ph">
+        <div>
+          <h2 class="pt" id="ovTitle">Visão geral</h2>
+          <p class="text-sm text-mut mt-1">Indicadores do período · metas: 60% aplicação · 90% satisfação</p>
+        </div>
+        <button onclick="downloadCSV()" class="btn">Exportar CSV</button>
       </div>
 
-      <div class="grid g4">
+      <!-- KPIs -->
+      <div class="grid g4 gap-3.5" style="grid-template-columns:repeat(4,1fr)">
         <div class="card">
-          <div class="kpi-top"><span class="kpi-label">% de aplicação</span><span class="pill" id="pAplic">—</span></div>
-          <div class="kpi-value num" id="kAplic">—</div>
-          <div class="kpi-foot" id="dAplic"></div>
-          <div class="track"><i id="tAplic" style="width:0"></i><b style="left:60%"></b></div>
+          <div class="flex justify-between items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-mut">% de aplicação</span>
+            <span class="pill p-mt" id="pAplic">—</span>
+          </div>
+          <div class="text-[32px] font-extrabold tracking-tight leading-none mt-3" id="kAplic">—</div>
+          <div class="text-xs text-mut mt-2 min-h-[18px] leading-relaxed" id="dAplic"></div>
+          <div class="track mt-3"><i id="tAplic" style="width:0"></i><b style="left:60%"></b></div>
         </div>
         <div class="card">
-          <div class="kpi-top"><span class="kpi-label">Taxa de satisfação</span><span class="pill" id="pSat">—</span></div>
-          <div class="kpi-value num" id="kSat">—</div>
-          <div class="kpi-foot" id="dSat"></div>
-          <div class="track"><i id="tSat" style="width:0"></i><b style="left:90%"></b></div>
+          <div class="flex justify-between items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-mut">Taxa de satisfação</span>
+            <span class="pill p-mt" id="pSat">—</span>
+          </div>
+          <div class="text-[32px] font-extrabold tracking-tight leading-none mt-3" id="kSat">—</div>
+          <div class="text-xs text-mut mt-2 min-h-[18px] leading-relaxed" id="dSat"></div>
+          <div class="track mt-3"><i id="tSat" style="width:0"></i><b style="left:90%"></b></div>
         </div>
         <div class="card">
-          <div class="kpi-top"><span class="kpi-label">NPS</span><span class="pill" id="pNps">—</span></div>
-          <div class="kpi-value num" id="kNps">—</div>
-          <div class="kpi-foot" id="dNps"></div>
-          <div class="track"><i id="tNps" style="width:0"></i><b style="left:75%"></b></div>
+          <div class="flex justify-between items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-mut">NPS</span>
+            <span class="pill p-mt" id="pNps">—</span>
+          </div>
+          <div class="text-[32px] font-extrabold tracking-tight leading-none mt-3" id="kNps">—</div>
+          <div class="text-xs text-mut mt-2 min-h-[18px] leading-relaxed" id="dNps"></div>
+          <div class="track mt-3"><i id="tNps" style="width:0"></i><b style="left:75%"></b></div>
         </div>
         <div class="card">
-          <div class="kpi-top"><span class="kpi-label">Pesquisas aplicadas</span><span class="pill mut" id="pTotal">—</span></div>
-          <div class="kpi-value num" id="kTotal">0</div>
-          <div class="kpi-foot" id="dTotal"></div>
-          <div class="track"><i id="tTotal" style="width:0;background:#98a2b3"></i></div>
+          <div class="flex justify-between items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-mut">Pesquisas aplicadas</span>
+            <span class="pill p-mt" id="pTotal">—</span>
+          </div>
+          <div class="text-[32px] font-extrabold tracking-tight leading-none mt-3" id="kTotal">0</div>
+          <div class="text-xs text-mut mt-2 min-h-[18px] leading-relaxed" id="dTotal"></div>
+          <div class="track mt-3"><i id="tTotal" style="width:0;background:#555"></i></div>
         </div>
       </div>
 
-      <div class="grid g84" style="margin-top:14px">
+      <!-- Charts row 1 -->
+      <div class="grid g-hs gap-3.5 mt-3.5" style="grid-template-columns:1.45fr .55fr">
         <div class="card">
-          <h3>Série histórica</h3>
-          <p class="sub">Evolução mensal da satisfação e do NPS · linha pontilhada = meta de 90%</p>
+          <h3 class="ch3">Série histórica</h3>
+          <p class="ch3s mb-4">Evolução mensal · linha pontilhada = meta 90%</p>
           <div id="histChart"></div>
-          <div class="legend"><span><i style="background:var(--accent)"></i>Satisfação</span><span><i style="background:#7c3aed"></i>NPS</span></div>
+          <div class="flex gap-5 mt-3 flex-wrap">
+            <span class="flex items-center gap-1.5 text-xs text-mut"><i style="width:14px;height:2.5px;display:inline-block;background:#3b82f6;border-radius:2px;vertical-align:2px"></i>Satisfação</span>
+            <span class="flex items-center gap-1.5 text-xs text-mut"><i style="width:14px;height:2.5px;display:inline-block;background:#a78bfa;border-radius:2px;vertical-align:2px"></i>NPS</span>
+          </div>
         </div>
         <div class="card">
-          <h3>Avaliações do período</h3>
-          <p class="sub" id="distSub">distribuição das respostas nos 16 critérios</p>
-          <div class="stack" id="distStack"></div>
-          <div class="dist" id="distRows"></div>
+          <h3 class="ch3">Avaliações</h3>
+          <p class="ch3s mb-1" id="distSub">distribuição nos 16 critérios</p>
+          <div class="sbar" id="distStack"></div>
+          <div id="distRows"></div>
         </div>
       </div>
 
-      <div class="grid g48" style="margin-top:14px">
+      <!-- Charts row 2 -->
+      <div class="grid g-nps gap-3.5 mt-3.5" style="grid-template-columns:.42fr 1.58fr">
         <div class="card">
-          <h3>NPS · composição</h3>
-          <p class="sub">promotores (9–10), neutros (7–8), detratores (0–6)</p>
-          <div id="npsDonut" style="display:grid;place-items:center"></div>
-          <div class="legend" style="justify-content:center" id="npsLegend"></div>
+          <h3 class="ch3">NPS · composição</h3>
+          <p class="ch3s">promotores · neutros · detratores</p>
+          <div id="npsDonut" class="flex justify-center items-center py-3"></div>
+          <div id="npsLegend" class="flex flex-col gap-2 mt-1"></div>
         </div>
         <div class="card">
-          <h3>Setores</h3>
-          <p class="sub">desempenho por setor no período · farol pela meta de satisfação</p>
-          <div style="overflow:auto"><table class="tbl"><thead><tr><th>Setor</th><th>Pesquisas</th><th>Aplicação</th><th>Satisfação</th><th>NPS</th></tr></thead><tbody id="setorBody"></tbody></table></div>
+          <h3 class="ch3">Desempenho por setor</h3>
+          <p class="ch3s mb-3">farol verde = ≥ 90% de satisfação</p>
+          <div class="overflow-auto">
+            <table class="tbl"><thead><tr>
+              <th>Setor</th><th>Pesquisas</th><th>Aplicação</th><th>Satisfação</th><th>NPS</th>
+            </tr></thead><tbody id="setorBody"></tbody></table>
+          </div>
         </div>
       </div>
 
-      <div class="card" style="margin-top:14px">
-        <h3>Manifestações do período</h3>
-        <p class="sub">reclamações primeiro — são as mais acionáveis para o serviço</p>
-        <div class="manif-list" id="manifList"></div>
+      <!-- Manifestações -->
+      <div class="card mt-3.5">
+        <h3 class="ch3">Manifestações do período</h3>
+        <p class="ch3s mb-4">reclamações primeiro — são as mais acionáveis</p>
+        <div id="manifList" class="grid gap-2.5"></div>
       </div>
     </section>
 
-    <!-- ════ NOVA PESQUISA ════ -->
+    <!-- ══ NOVA PESQUISA ═══════════════════════════ -->
     <section id="novo" class="section">
       <form id="form" onsubmit="saveRecord(event)">
-        <div class="page-head">
-          <div><h2>Nova pesquisa</h2><p>Registro direto na aba MATRIZ · toque nas opções para avaliar</p></div>
-          <button class="btn pri" type="submit">Salvar pesquisa</button>
+        <div class="ph">
+          <div><h2 class="pt">Nova pesquisa</h2><p class="text-sm text-mut mt-1">Registro na aba MATRIZ · toque nos chips para avaliar</p></div>
+          <button class="btn-p" type="submit">Salvar pesquisa</button>
         </div>
         <input type="hidden" id="rowNumber">
         <div class="card">
-          <div class="fgrid">
-            <div class="field"><label>Setor</label><input id="setor" required list="setoresList" placeholder="Ex.: CLÍNICA ORTOPÉDICA"></div>
-            <div class="field"><label>Prontuário</label><input id="pront"></div>
-            <div class="field"><label>Data</label><input id="data" type="date"></div>
-            <div class="field"><label>Tipo</label><input id="tipo" list="tiposList" placeholder="PAC, ACOMP, PAC+ACOMP"></div>
-            <div class="field"><label>Data nasc.</label><input id="dn" type="date"></div>
-            <div class="field"><label>Idade</label><input id="idade" type="number" min="0"></div>
-            <div class="field"><label>Sexo</label><select id="sexo"><option></option><option>F</option><option>M</option><option>Outro</option></select></div>
-            <div class="field"><label>NPS · 0 a 10</label><input id="nps" type="number" min="0" max="10" placeholder="Recomendaria o hospital?"></div>
+          <div class="grid g-form gap-3.5" style="grid-template-columns:repeat(4,1fr)">
+            <div><label class="fl">Setor</label><input id="setor" required list="setoresList" class="fi" placeholder="Ex.: CLÍNICA ORTOPÉDICA"></div>
+            <div><label class="fl">Prontuário</label><input id="pront" class="fi"></div>
+            <div><label class="fl">Data</label><input id="data" type="date" class="fi"></div>
+            <div><label class="fl">Tipo</label><input id="tipo" list="tiposList" class="fi" placeholder="PAC, ACOMP…"></div>
+            <div><label class="fl">Data nasc.</label><input id="dn" type="date" class="fi"></div>
+            <div><label class="fl">Idade</label><input id="idade" type="number" min="0" class="fi"></div>
+            <div><label class="fl">Sexo</label><select id="sexo" class="fi"><option></option><option>F</option><option>M</option><option>Outro</option></select></div>
+            <div><label class="fl">NPS 0–10</label><input id="nps" type="number" min="0" max="10" class="fi" placeholder="Recomendaria?"></div>
           </div>
           <datalist id="setoresList"></datalist>
           <datalist id="tiposList"></datalist>
         </div>
-        <div class="grid" style="grid-template-columns:1fr 1fr 1fr;margin-top:14px" id="rateBlocks"></div>
-        <div class="card" style="margin-top:14px">
-          <div class="fgrid">
-            <div class="field span2"><label>Sugestões</label><textarea id="sugestoes"></textarea></div>
-            <div class="field span2"><label>Reclamações</label><textarea id="reclamacoes"></textarea></div>
-            <div class="field span2"><label>Comentários</label><textarea id="comentarios"></textarea></div>
-            <div class="field span2"><label>Elogios</label><textarea id="elogios"></textarea></div>
-            <div class="field"><label>Entrevistador</label><input id="entrevistador"></div>
-            <div class="field span2"><label>Encaminhamentos</label><input id="encaminhamentos"></div>
+        <div class="grid g-rates gap-3.5 mt-3.5" id="rateBlocks" style="grid-template-columns:repeat(3,1fr)"></div>
+        <div class="card mt-3.5">
+          <div class="grid g-form gap-3.5" style="grid-template-columns:repeat(4,1fr)">
+            <div style="grid-column:span 2"><label class="fl">Sugestões</label><textarea id="sugestoes" class="fta"></textarea></div>
+            <div style="grid-column:span 2"><label class="fl">Reclamações</label><textarea id="reclamacoes" class="fta"></textarea></div>
+            <div style="grid-column:span 2"><label class="fl">Comentários</label><textarea id="comentarios" class="fta"></textarea></div>
+            <div style="grid-column:span 2"><label class="fl">Elogios</label><textarea id="elogios" class="fta"></textarea></div>
+            <div><label class="fl">Entrevistador</label><input id="entrevistador" class="fi"></div>
+            <div style="grid-column:span 2"><label class="fl">Encaminhamentos</label><input id="encaminhamentos" class="fi"></div>
           </div>
         </div>
       </form>
     </section>
 
-    <!-- ════ REGISTROS ════ -->
+    <!-- ══ REGISTROS ════════════════════════════════ -->
     <section id="registros" class="section">
-      <div class="page-head">
-        <div><h2>Registros</h2><p>Pesquisas salvas na MATRIZ, respeitando o período e setor selecionados acima</p></div>
-        <input id="q" class="ctl" placeholder="Buscar…" oninput="renderTable()" style="min-width:240px">
+      <div class="ph">
+        <div><h2 class="pt">Registros</h2><p class="text-sm text-mut mt-1">Pesquisas salvas na MATRIZ</p></div>
+        <input id="q" class="ctl" placeholder="Buscar…" oninput="renderTable()" style="min-width:220px">
       </div>
-      <div class="card" style="padding:6px 16px;overflow:auto">
-        <table class="tbl" style="min-width:960px"><thead><tr><th>Data</th><th>Setor</th><th>Pront.</th><th>Tipo</th><th>Sexo</th><th>Satisfação</th><th>NPS</th><th>Manifestação</th><th></th></tr></thead><tbody id="tbody"></tbody></table>
+      <div class="card p-0 overflow-auto">
+        <table class="tbl" style="min-width:1000px">
+          <thead><tr><th>Data</th><th>Setor</th><th>Pront.</th><th>Tipo</th><th>Sexo</th><th>Satisfação</th><th>NPS</th><th>Manifestação</th><th></th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
       </div>
     </section>
 
-    <!-- ════ SAÍDAS ════ -->
+    <!-- ══ SAÍDAS ════════════════════════════════════ -->
     <section id="saidas" class="section">
-      <div class="page-head">
-        <div><h2>Saídas hospitalares</h2><p>Altas, transferências externas e óbitos · alimentam a % de aplicação (meta 60%)</p></div>
+      <div class="ph">
+        <div><h2 class="pt">Saídas hospitalares</h2><p class="text-sm text-mut mt-1">Altas, transferências e óbitos · base da % de aplicação (meta 60%)</p></div>
       </div>
-      <div class="grid" style="grid-template-columns:340px 1fr;align-items:start">
+      <div class="grid gap-3.5" style="grid-template-columns:310px 1fr;align-items:start">
         <form class="card" id="formSaida" onsubmit="saveSaida(event)">
-          <h3 style="margin-bottom:14px">Registrar saídas do mês</h3>
+          <h3 class="ch3 mb-4">Registrar saídas do mês</h3>
           <input type="hidden" id="sRowNumber">
-          <div class="grid" style="gap:12px">
-            <div class="field"><label>Mês/Ano</label><input id="sMes" type="month" required></div>
-            <div class="field"><label>Setor</label><input id="sSetor" required list="setoresList"></div>
-            <div class="field"><label>Nº de saídas</label><input id="sSaidas" type="number" min="0" required></div>
-            <button class="btn pri" type="submit" style="width:100%">Salvar</button>
+          <div class="grid gap-3">
+            <div><label class="fl">Mês/Ano</label><input id="sMes" type="month" required class="fi"></div>
+            <div><label class="fl">Setor</label><input id="sSetor" required list="setoresList" class="fi"></div>
+            <div><label class="fl">Nº de saídas</label><input id="sSaidas" type="number" min="0" required class="fi"></div>
+            <button class="btn-p" type="submit">Salvar</button>
           </div>
         </form>
-        <div class="card" style="padding:6px 16px;overflow:auto">
-          <table class="tbl"><thead><tr><th>Mês/Ano</th><th>Setor</th><th>Saídas</th><th>Pesquisas</th><th>Aplicação</th><th></th></tr></thead><tbody id="saidasBody"></tbody></table>
+        <div class="card p-0 overflow-auto">
+          <table class="tbl">
+            <thead><tr><th>Mês/Ano</th><th>Setor</th><th>Saídas</th><th>Pesquisas</th><th>Aplicação</th><th></th></tr></thead>
+            <tbody id="saidasBody"></tbody>
+          </table>
         </div>
       </div>
     </section>
 
-    <!-- ════ RELATÓRIO ════ -->
+    <!-- ══ RELATÓRIO ═════════════════════════════════ -->
     <section id="relatorio" class="section">
-      <div class="page-head no-print">
-        <div><h2>Relatório mensal</h2><p>Formato institucional, pronto para imprimir, salvar em PDF ou copiar para o documento assinado</p></div>
-        <div style="display:flex;gap:8px">
+      <div class="ph no-print">
+        <div><h2 class="pt">Relatório mensal</h2><p class="text-sm text-mut mt-1">Formato institucional · pronto para imprimir ou salvar em PDF</p></div>
+        <div class="flex gap-2">
           <select id="repMes" class="ctl" onchange="renderReport()"></select>
-          <button class="btn pri" onclick="window.print()">Imprimir / PDF</button>
+          <button onclick="window.print()" class="btn-p">Imprimir / PDF</button>
         </div>
       </div>
-      <div class="report" id="reportBody"><div class="empty">Sem dados para o período selecionado.</div></div>
+      <div class="card rpt" id="reportBody"><div class="empty">Sem dados para o período selecionado.</div></div>
     </section>
 
   </div>
-  <div id="toast" class="toast"></div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 left-1/2 bg-s3 border border-s4 text-ink px-4 py-2.5 rounded-xl text-sm font-medium shadow-2xl opacity-0 z-50"
+       style="transform:translate(-50%,8px);transition:opacity .2s,transform .2s"></div>
 
 <script>
-const META_APLICACAO=60, META_SATISFACAO=90, META_NPS=75;
-const REPORT_BLOCKS=[
+const META_A=60,META_S=90,META_N=75;
+const BLOCKS=[
   ['1. Acolhimento','ACOLHIMENTO',[['gentilezaAcolhimento','Gentileza e atenção'],['agilidade','Agilidade'],['clareza','Clareza']],'obsAcolhimento'],
   ['2. Assistência','ASSISTÊNCIA',[['gentilezaAssistencia','Gentileza e atenção'],['identificacao','Identificação'],['intimidade','Intimidade e privacidade'],['horarioDescanso','Horário de descanso'],['esclarecimento','Esclarecimento'],['cuidados','Cuidados prestados'],['confianca','Confiança e segurança']],'obsAssistencia'],
   ['3. Serviços prestados','SERVIÇOS PRESTADOS',[['acesso','Acesso aos serviços'],['acomodacao','Acomodação'],['limpeza','Limpeza'],['enxoval','Enxoval'],['alimentacao','Alimentação'],['locomocao','Locomoção']],'obsServicos']
 ];
-const RATING_FIELDS=REPORT_BLOCKS.flatMap(b=>b[2].map(c=>c[0]));
+const RF=BLOCKS.flatMap(b=>b[2].map(c=>c[0]));
 const RATINGS=['ÓTIMO','BOM','REGULAR','RUIM','N/A'];
 const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const MES_ABREV=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-let state={records:[],saidas:[],lookups:{setores:[],tipos:[],sexos:[]}};
-
+const MA=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+let ST={records:[],saidas:[],lookups:{setores:[],tipos:[],sexos:[]}};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800)}
-function setLoading(v){$('app').classList.toggle('loading',v)}
-function showTab(tab){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));$(tab).classList.add('active');document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab))}
-document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
-
-const monthOf=r=>(r.data||'').slice(0,7);
-const mesLabel=m=>{const[y,mm]=m.split('-');return(MESES[+mm-1]||m)+' de '+y};
-const mesCurto=m=>{const[y,mm]=m.split('-');return(MES_ABREV[+mm-1]||m)+'/'+y.slice(2)};
-function prevMonth(m){const[y,mm]=m.split('-').map(Number);const d=new Date(y,mm-2,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
-const fmt=(v,dec=0)=>v==null||isNaN(v)?'—':v.toFixed(dec).replace('.',',')+'%';
-
-function allMonths(){const s=new Set(state.records.map(monthOf).filter(Boolean));state.saidas.forEach(x=>x.mes&&s.add(x.mes));return[...s].sort()}
-function hydrateControls(){
-  const meses=allMonths().reverse();
-  const cur=$('gMes').value;
-  $('gMes').innerHTML='<option value="">Todos os meses</option>'+meses.map(m=>`<option value="${m}">${mesLabel(m)}</option>`).join('');
-  $('gMes').value=meses.includes(cur)?cur:(meses[0]||'');
-  const curR=$('repMes').value;
-  $('repMes').innerHTML=meses.map(m=>`<option value="${m}">${mesLabel(m)}</option>`).join('')||'<option value="">Sem dados</option>';
-  if(meses.includes(curR))$('repMes').value=curR;
-  const curS=$('gSetor').value;
-  $('gSetor').innerHTML='<option value="">Todos os setores</option>'+state.lookups.setores.map(v=>`<option>${esc(v)}</option>`).join('');
-  if(state.lookups.setores.includes(curS))$('gSetor').value=curS;
-  $('setoresList').innerHTML=state.lookups.setores.map(v=>`<option value="${esc(v)}"></option>`).join('');
-  $('tiposList').innerHTML=(state.lookups.tipos||[]).map(v=>`<option value="${esc(v)}"></option>`).join('');
+function toast(msg){const t=$('toast');t.textContent=msg;t.style.opacity='1';t.style.transform='translate(-50%,0)';setTimeout(()=>{t.style.opacity='0';t.style.transform='translate(-50%,8px)'},2500)}
+function load(v){$('app').classList.toggle('loading',v)}
+function showTab(tab){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));$(tab).classList.add('active');document.querySelectorAll('.nav-b').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab))}
+document.querySelectorAll('.nav-b').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+const mo=r=>(r.data||'').slice(0,7);
+const ml=m=>{const[y,mm]=m.split('-');return(MESES[+mm-1]||m)+' de '+y};
+const mc=m=>{const[y,mm]=m.split('-');return(MA[+mm-1]||m)+'/'+y.slice(2)};
+function pm(m){const[y,mm]=m.split('-').map(Number);const d=new Date(y,mm-2,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
+const fmt=(v,d=0)=>v==null||isNaN(v)?'—':v.toFixed(d).replace('.',',')+'%';
+function allM(){const s=new Set(ST.records.map(mo).filter(Boolean));ST.saidas.forEach(x=>x.mes&&s.add(x.mes));return[...s].sort()}
+function hydrate(){
+  const m=allM().reverse();const cm=$('gMes').value;
+  $('gMes').innerHTML='<option value="">Todos os meses</option>'+m.map(x=>`<option value="${x}">${ml(x)}</option>`).join('');
+  $('gMes').value=m.includes(cm)?cm:(m[0]||'');
+  const cr=$('repMes').value;
+  $('repMes').innerHTML=m.map(x=>`<option value="${x}">${ml(x)}</option>`).join('')||'<option value="">Sem dados</option>';
+  if(m.includes(cr))$('repMes').value=cr;
+  const cs=$('gSetor').value;
+  $('gSetor').innerHTML='<option value="">Todos os setores</option>'+ST.lookups.setores.map(v=>`<option>${esc(v)}</option>`).join('');
+  if(ST.lookups.setores.includes(cs))$('gSetor').value=cs;
+  $('setoresList').innerHTML=ST.lookups.setores.map(v=>`<option value="${esc(v)}"></option>`).join('');
+  $('tiposList').innerHTML=(ST.lookups.tipos||[]).map(v=>`<option value="${esc(v)}"></option>`).join('');
 }
-function rowsFor(mes,setor){return state.records.filter(r=>(!mes||monthOf(r)===mes)&&(!setor||r.setor===setor))}
-function saidasFor(mes,setor){return state.saidas.filter(s=>(!mes||s.mes===mes)&&(!setor||s.setor===setor)).reduce((t,x)=>t+x.saidas,0)}
-
-function summary(rows){
-  let ot=0,bom=0,reg=0,ruim=0,na=0,man=0,p=0,n=0,d=0;
-  rows.forEach(r=>{
-    RATING_FIELDS.forEach(f=>{const v=String(r[f]||'').trim().toUpperCase();
-      if(v==='ÓTIMO')ot++;else if(v==='BOM')bom++;else if(v==='REGULAR')reg++;else if(v==='RUIM')ruim++;else if(v==='N/A')na++});
-    man+=['sugestoes','reclamacoes','comentarios','elogios'].filter(k=>String(r[k]||'').trim()).length;
+function rows(mes,setor){return ST.records.filter(r=>(!mes||mo(r)===mes)&&(!setor||r.setor===setor))}
+function saidas(mes,setor){return ST.saidas.filter(s=>(!mes||s.mes===mes)&&(!setor||s.setor===setor)).reduce((t,x)=>t+x.saidas,0)}
+function sum(rr){
+  let ot=0,bo=0,re=0,ru=0,na=0,mn=0,p=0,n=0,d=0;
+  rr.forEach(r=>{
+    RF.forEach(f=>{const v=String(r[f]||'').trim().toUpperCase();if(v==='ÓTIMO')ot++;else if(v==='BOM')bo++;else if(v==='REGULAR')re++;else if(v==='RUIM')ru++;else if(v==='N/A')na++});
+    mn+=['sugestoes','reclamacoes','comentarios','elogios'].filter(k=>String(r[k]||'').trim()).length;
     if(r.nps!==''&&r.nps!=null){const x=+r.nps;if(x>=9)p++;else if(x>=7)n++;else d++}
   });
-  const cons=ot+bom+reg+ruim, resp=p+n+d;
-  return{total:rows.length,ot,bom,reg,ruim,na,man,p,n,d,
-    sat:cons?(ot+bom)/cons*100:null,
-    nps:resp?(p-d)/resp*100:null};
+  const c=ot+bo+re+ru,np=p+n+d;
+  return{total:rr.length,ot,bo,re,ru,na,mn,p,n,d,sat:c?(ot+bo)/c*100:null,nps:np?(p-d)/np*100:null};
 }
-function countsFor(rows,field){const c={'ÓTIMO':0,'BOM':0,'REGULAR':0,'RUIM':0,'N/A':0};rows.forEach(r=>{const v=String(r[field]||'').trim().toUpperCase();if(v in c)c[v]++});return c}
-function weightedPct(c){const valid=c['ÓTIMO']+c['BOM']+c['REGULAR']+c['RUIM'];if(!valid)return null;return(c['ÓTIMO']*3+c['BOM']*2+c['REGULAR']-c['RUIM'])/(valid*3)*100}
-const npsZona=v=>v>=75?'zona de excelência':v>=50?'zona de qualidade':v>=0?'zona de aperfeiçoamento':'zona crítica';
-
-/* ── Render: visão geral ── */
+function cf(rr,f){const c={'ÓTIMO':0,'BOM':0,'REGULAR':0,'RUIM':0,'N/A':0};rr.forEach(r=>{const v=String(r[f]||'').trim().toUpperCase();if(v in c)c[v]++});return c}
+function wp(c){const v=c['ÓTIMO']+c['BOM']+c['REGULAR']+c['RUIM'];if(!v)return null;return(c['ÓTIMO']*3+c['BOM']*2+c['REGULAR']-c['RUIM'])/(v*3)*100}
+const zona=v=>v>=75?'zona de excelência':v>=50?'zona de qualidade':v>=0?'zona de aperfeiçoamento':'zona crítica';
 function renderAll(){
-  const mes=$('gMes').value, setor=$('gSetor').value;
-  const rows=rowsFor(mes,setor), s=summary(rows);
-  const saidas=saidasFor(mes,setor);
-  const aplic=saidas?s.total/saidas*100:null;
-  const prev=mes?summary(rowsFor(prevMonth(mes),setor)):null;
-  const prevSaidas=mes?saidasFor(prevMonth(mes),setor):0;
-  const prevAplic=prev&&prevSaidas?prev.total/prevSaidas*100:null;
-
-  $('ovTitle').textContent=(mes?mesLabel(mes):'Todos os meses')+(setor?' · '+setor:'');
-  kpi('Aplic',aplic,META_APLICACAO,prevAplic,saidas?`${s.total} pesquisas / ${saidas} saídas`:'cadastre as saídas do mês');
-  kpi('Sat',s.sat,META_SATISFACAO,prev?prev.sat:null,'');
-  kpi('Nps',s.nps,META_NPS,prev?prev.nps:null,s.nps!=null?npsZona(s.nps):'');
-  $('kTotal').textContent=s.total;
-  $('pTotal').textContent=s.man+' manifestações';
-  $('dTotal').innerHTML=prev&&mes?deltaTxt(s.total-prev.total,' pesquisas vs '+mesCurto(prevMonth(mes)),0):'';
-  $('tTotal').style.width=Math.min(100,s.total/Math.max(1,...allMonths().map(m=>rowsFor(m,setor).length))*100)+'%';
-
-  renderHist(setor); renderDist(s); renderDonut(s); renderSetores(mes); renderManif(rows); renderTable(); renderSaidasTbl(); renderReport();
+  const mes=$('gMes').value,set=$('gSetor').value;
+  const rr=rows(mes,set),s=sum(rr);
+  const sd=saidas(mes,set);
+  const ap=sd?s.total/sd*100:null;
+  const pv=mes?sum(rows(pm(mes),set)):null;
+  const pvS=mes?saidas(pm(mes),set):0;
+  const pvA=pv&&pvS?pv.total/pvS*100:null;
+  $('ovTitle').textContent=(mes?ml(mes):'Todos os meses')+(set?' · '+set:'');
+  kpi('Aplic',ap,META_A,pvA,sd?`${s.total} pesquisas / ${sd} saídas`:'cadastre as saídas do mês');
+  kpi('Sat',s.sat,META_S,pv?pv.sat:null,'');
+  kpi('Nps',s.nps,META_N,pv?pv.nps:null,s.nps!=null?zona(s.nps):'');
+  $('kTotal').textContent=s.total;$('pTotal').textContent=s.mn+' manifestações';
+  $('dTotal').innerHTML=pv&&mes?dt(s.total-pv.total,' pesquisas vs '+mc(pm(mes)),0):'';
+  $('tTotal').style.width=Math.min(100,s.total/Math.max(1,...allM().map(m=>rows(m,set).length))*100)+'%';
+  rHist(set);rDist(s);rDonut(s);rSetores(mes);rManif(rr);renderTable();rSaidas();renderReport();
 }
-function kpi(key,val,meta,prevVal,foot){
-  const pill=$('p'+key), v=$('k'+key), track=$('t'+key), dl=$('d'+key);
-  v.textContent=fmt(val,key==='Sat'?1:0);
-  if(val==null){pill.className='pill mut';pill.textContent='sem dados';track.style.width='0';track.className=''}
-  else{
-    const ok=val>=meta;
-    pill.className='pill '+(ok?'ok':val>=meta-10?'warn':'bad');
-    pill.textContent=ok?'Meta '+meta+'% ✓':'Meta '+meta+'%';
-    track.style.width=Math.max(0,Math.min(100,val))+'%';
-    track.className=ok?'ok':val>=meta-10?'warn':'bad';
-  }
-  let d='';
-  if(prevVal!=null&&val!=null&&$('gMes').value)d=deltaTxt(val-prevVal,' pp vs '+mesCurto(prevMonth($('gMes').value)),1);
-  dl.innerHTML=[d,esc(foot)].filter(Boolean).join(' · ');
+function kpi(k,v,meta,pv,foot){
+  const pl=$('p'+k),el=$('k'+k),tr=$('t'+k),dl=$('d'+k);
+  el.textContent=fmt(v,k==='Sat'?1:0);
+  if(v==null){pl.className='pill p-mt';pl.textContent='sem dados';tr.style.width='0';tr.style.background='#555'}
+  else{const ok=v>=meta,wn=v>=meta-10;pl.className='pill '+(ok?'p-ok':wn?'p-w':'p-bd');pl.textContent='Meta '+meta+'%'+(ok?' ✓':'');tr.style.width=Math.max(0,Math.min(100,v))+'%';tr.style.background=ok?'#22c55e':wn?'#f59e0b':'#ef4444'}
+  const curM=$('gMes').value, pr=curM?pm(curM):null;
+  dl.innerHTML=[pv!=null&&v!=null&&curM?dt(v-pv,' pp vs '+mc(pr),1):'',esc(foot)].filter(Boolean).join(' · ');
 }
-function deltaTxt(d,suffix,dec){if(Math.abs(d)<.05)return'<span style="color:var(--soft)">— estável'+suffix+'</span>';const up=d>0;return`<span class="${up?'delta-up':'delta-down'}">${up?'▲':'▼'} ${Math.abs(d).toFixed(dec).replace('.',',')}${suffix}</span>`}
-
-function renderHist(setor){
-  const meses=allMonths().slice(-12);
-  const el=$('histChart');
-  if(meses.length<2){el.innerHTML='<div class="empty">Registre pelo menos dois meses para ver a evolução.</div>';return}
-  const sat=[],nps=[];
-  meses.forEach(m=>{const s=summary(rowsFor(m,setor));sat.push(s.sat);nps.push(s.nps)});
-  const W=760,H=230,P={l:36,r:42,t:12,b:26};
-  const X=i=>P.l+i*(W-P.l-P.r)/(meses.length-1);
+/* removed shadowing alias */
+function dt(d,sf,dc){if(Math.abs(d)<.05)return`<span style="color:#555">— estável${sf}</span>`;const u=d>0;return`<span class="${u?'du':'dd'}">${u?'▲':'▼'} ${Math.abs(d).toFixed(dc).replace('.',',')}${sf}</span>`}
+function rHist(set){
+  const m=allM().slice(-12);const el=$('histChart');
+  if(m.length<2){el.innerHTML='<div class="empty">Registre dois meses para ver a evolução.</div>';return}
+  const sa=[],np=[];m.forEach(x=>{const s=sum(rows(x,set));sa.push(s.sat);np.push(s.nps)});
+  const W=760,H=210,P={l:34,r:44,t:10,b:24};
+  const X=i=>P.l+i*(W-P.l-P.r)/(m.length-1);
   const Y=v=>P.t+(100-Math.max(0,Math.min(100,v)))*(H-P.t-P.b)/100;
   let g='';
-  [0,25,50,75,100].forEach(v=>{g+=`<line x1="${P.l}" y1="${Y(v)}" x2="${W-P.r}" y2="${Y(v)}" stroke="#eef0f4"/><text x="${P.l-8}" y="${Y(v)+4}" font-size="10" fill="#98a2b3" text-anchor="end">${v}</text>`});
-  g+=`<line x1="${P.l}" y1="${Y(90)}" x2="${W-P.r}" y2="${Y(90)}" stroke="#0b1220" stroke-dasharray="3 5" opacity=".35"/>`;
-  meses.forEach((m,i)=>{g+=`<text x="${X(i)}" y="${H-7}" font-size="10" fill="#98a2b3" text-anchor="middle">${mesCurto(m)}</text>`});
+  [0,25,50,75,100].forEach(v=>{g+=`<line x1="${P.l}" y1="${Y(v)}" x2="${W-P.r}" y2="${Y(v)}" stroke="#3a3a3a" stroke-width="1"/><text x="${P.l-7}" y="${Y(v)+4}" font-size="10" fill="#555" text-anchor="end">${v}</text>`});
+  g+=`<line x1="${P.l}" y1="${Y(90)}" x2="${W-P.r}" y2="${Y(90)}" stroke="#555" stroke-dasharray="3 5" stroke-width="1"/>`;
+  m.forEach((x,i)=>{g+=`<text x="${X(i)}" y="${H-5}" font-size="10" fill="#555" text-anchor="middle">${mc(x)}</text>`});
   const line=(vals,color)=>{
     const pts=vals.map((v,i)=>v==null?null:[X(i),Y(v)]);
-    let path='',started=false;
-    pts.forEach(p=>{if(!p){started=false;return}path+=(started?'L':'M')+p[0]+' '+p[1]+' ';started=true});
-    let dots=pts.map((p,i)=>p?`<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="${color}"><title>${mesLabel(meses[i])}: ${fmt(vals[i],1)}</title></circle>`:'').join('');
-    const last=[...pts].reverse().find(Boolean), lastV=[...vals].reverse().find(v=>v!=null);
-    const lbl=last?`<text x="${Math.min(last[0]+6,W-4)}" y="${last[1]-7}" font-size="11" font-weight="700" fill="${color}">${fmt(lastV,0)}</text>`:'';
-    return`<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`+dots+lbl;
+    let path='',st=false;pts.forEach(p=>{if(!p){st=false;return}path+=(st?'L':'M')+p[0]+' '+p[1]+' ';st=true});
+    const dots=pts.map((p,i)=>p?`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${color}"><title>${ml(m[i])}: ${fmt(vals[i],1)}</title></circle>`:'').join('');
+    const last=[...pts].reverse().find(Boolean),lv=[...vals].reverse().find(v=>v!=null);
+    const lbl=last?`<text x="${Math.min(last[0]+7,W-4)}" y="${last[1]-8}" font-size="11" font-weight="700" fill="${color}">${fmt(lv,0)}</text>`:'';
+    return`<path d="${path}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round"/>`+dots+lbl;
   };
-  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">${g}${line(sat,'#1a56db')}${line(nps,'#7c3aed')}</svg>`;
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">${g}${line(sa,'#3b82f6')}${line(np,'#a78bfa')}</svg>`;
 }
-function renderDist(s){
-  const tot=s.ot+s.bom+s.reg+s.ruim+s.na;
-  $('distSub').textContent=tot?tot+' respostas nos 16 critérios':'distribuição das respostas nos 16 critérios';
-  if(!tot){$('distStack').innerHTML='';$('distRows').innerHTML='<div class="empty">Sem avaliações no período.</div>';return}
-  const items=[['Ótimo',s.ot,'c-otimo'],['Bom',s.bom,'c-bom'],['Regular',s.reg,'c-regular'],['Ruim',s.ruim,'c-ruim'],['N/A',s.na,'c-na']];
-  $('distStack').innerHTML=items.map(([,v,c])=>`<i class="${c}" style="width:${v/tot*100}%"></i>`).join('');
-  const max=Math.max(...items.map(i=>i[1]),1);
-  $('distRows').innerHTML=items.map(([k,v,c])=>`<div class="dist-row"><span>${k}</span><div class="bar"><i class="${c}" style="width:${v/max*100}%"></i></div><b class="num">${v}</b><span class="pc num">${(v/tot*100).toFixed(1).replace('.',',')}%</span></div>`).join('');
+function rDist(s){
+  const tot=s.ot+s.bo+s.re+s.ru+s.na;
+  $('distSub').textContent=tot?tot+' respostas nos 16 critérios':'distribuição nos 16 critérios';
+  if(!tot){$('distStack').innerHTML='';$('distRows').innerHTML='<div class="empty">Sem avaliações.</div>';return}
+  const items=[['Ótimo',s.ot,'c-o'],['Bom',s.bo,'c-b'],['Regular',s.re,'c-r'],['Ruim',s.ru,'c-ru'],['N/A',s.na,'c-n']];
+  $('distStack').innerHTML=items.map(([,v,c])=>`<span class="${c}" style="width:${v/tot*100}%"></span>`).join('');
+  const mx=Math.max(...items.map(i=>i[1]),1);
+  $('distRows').innerHTML=items.map(([k,v,c])=>`<div class="drow"><span style="color:#b4b4b4">${k}</span><div class="dbar"><span class="${c}" style="width:${v/mx*100}%"></span></div><b style="color:#ececec">${v}</b><span style="color:#555;font-size:11.5px;text-align:right">${(v/tot*100).toFixed(1).replace('.',',')}%</span></div>`).join('');
 }
-function renderDonut(s){
+function rDonut(s){
   const tot=s.p+s.n+s.d;
-  if(!tot){$('npsDonut').innerHTML='<div class="empty">Sem respostas NPS.</div>';$('npsLegend').innerHTML='';return}
-  const R=56,C=2*Math.PI*R;
-  const segs=[[s.p,'#047857'],[s.n,'#f59e0b'],[s.d,'#ef4444']];
+  if(!tot){$('npsDonut').innerHTML='<div class="empty">Sem NPS.</div>';$('npsLegend').innerHTML='';return}
+  const R=52,C=2*Math.PI*R;const segs=[[s.p,'#22c55e'],[s.n,'#f59e0b'],[s.d,'#ef4444']];
   let off=0,arcs='';
-  segs.forEach(([v,c])=>{const len=v/tot*C;if(v)arcs+=`<circle r="${R}" cx="70" cy="70" fill="none" stroke="${c}" stroke-width="14" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)"/>`;off+=len});
-  $('npsDonut').innerHTML=`<svg viewBox="0 0 140 140" style="width:170px">${arcs}<text x="70" y="66" text-anchor="middle" font-size="24" font-weight="800" fill="#0b1220">${fmt(s.nps)}</text><text x="70" y="84" text-anchor="middle" font-size="10" fill="#98a2b3">NPS</text></svg>`;
-  $('npsLegend').innerHTML=`<span><i style="background:#047857"></i>Promotores <b class="num">${s.p}</b></span><span><i style="background:#f59e0b"></i>Neutros <b class="num">${s.n}</b></span><span><i style="background:#ef4444"></i>Detratores <b class="num">${s.d}</b></span>`;
+  segs.forEach(([v,c])=>{const l=v/tot*C;if(v)arcs+=`<circle r="${R}" cx="64" cy="64" fill="none" stroke="${c}" stroke-width="12" stroke-dasharray="${l} ${C-l}" stroke-dashoffset="${-off}" transform="rotate(-90 64 64)"/>`;off+=l});
+  $('npsDonut').innerHTML=`<svg viewBox="0 0 128 128" style="width:148px"><circle r="${R}" cx="64" cy="64" fill="none" stroke="#3a3a3a" stroke-width="12"/>${arcs}<text x="64" y="60" text-anchor="middle" font-size="22" font-weight="800" fill="#ececec">${fmt(s.nps)}</text><text x="64" y="77" text-anchor="middle" font-size="9" fill="#8e8ea0">NPS</text></svg>`;
+  $('npsLegend').innerHTML=[['Promotores',s.p,'#22c55e'],['Neutros',s.n,'#f59e0b'],['Detratores',s.d,'#ef4444']].map(([l,v,c])=>`<div style="display:flex;justify-content:space-between;font-size:12px"><span><span style="display:inline-block;width:8px;height:8px;border-radius:99px;background:${c};margin-right:7px;vertical-align:1px"></span><span style="color:#b4b4b4">${l}</span></span><b style="color:#ececec">${v}</b></div>`).join('');
 }
-function renderSetores(mes){
-  const map={};
-  rowsFor(mes,'').forEach(r=>{const k=r.setor||'Sem setor';(map[k]=map[k]||[]).push(r)});
-  const body=Object.entries(map).sort((a,b)=>b[1].length-a[1].length).map(([k,v])=>{
-    const s=summary(v), sd=saidasFor(mes,k), ap=sd?s.total/sd*100:null;
-    const farol=s.sat==null?'mut':s.sat>=META_SATISFACAO?'ok':s.sat>=META_SATISFACAO-10?'warn':'bad';
-    return`<tr><td><span class="dot ${farol}"></span>${esc(k)}</td><td class="num">${s.total}</td>
-      <td><span class="mini-bar"><i style="width:${Math.min(100,ap||0)}%;${ap!=null&&ap<META_APLICACAO?'background:var(--bad)':''}"></i></span><span class="num">${fmt(ap)}</span></td>
-      <td><span class="mini-bar"><i style="width:${Math.min(100,s.sat||0)}%;${s.sat!=null&&s.sat<META_SATISFACAO?'background:var(--bad)':''}"></i></span><span class="num">${fmt(s.sat,1)}</span></td>
-      <td class="num">${fmt(s.nps)}</td></tr>`;
-  }).join('');
-  $('setorBody').innerHTML=body||'<tr><td colspan="5" class="empty">Sem dados no período.</td></tr>';
+function rSetores(mes){
+  const map={};rows(mes,'').forEach(r=>{const k=r.setor||'Sem setor';(map[k]=map[k]||[]).push(r)});
+  $('setorBody').innerHTML=Object.entries(map).sort((a,b)=>b[1].length-a[1].length).map(([k,v])=>{
+    const s=sum(v),sd=saidas(mes,k),ap=sd?s.total/sd*100:null;
+    const fd=s.sat==null?'d-mt':s.sat>=META_S?'d-ok':s.sat>=META_S-10?'d-w':'d-bd';
+    const abd=ap!=null&&ap<META_A,sbd=s.sat!=null&&s.sat<META_S;
+    return`<tr><td><span class="dot ${fd}"></span>${esc(k)}</td><td style="font-size:13px">${s.total}</td>
+    <td><span class="mbar"><i style="width:${Math.min(100,ap||0)}%;${abd?'background:#ef4444':''}"></i></span><span style="font-size:13px;color:${abd?'#fca5a5':'#ececec'}">${fmt(ap)}</span></td>
+    <td><span class="mbar"><i style="width:${Math.min(100,s.sat||0)}%;${sbd?'background:#ef4444':''}"></i></span><span style="font-size:13px;color:${sbd?'#fca5a5':'#ececec'}">${fmt(s.sat,1)}</span></td>
+    <td style="font-size:13px">${fmt(s.nps)}</td></tr>`;
+  }).join('')||'<tr><td colspan="5" class="empty">Sem dados.</td></tr>';
 }
-function renderManif(rows){
-  const cats=[['rec','RECLAMAÇÃO','reclamacoes'],['sug','SUGESTÃO','sugestoes'],['elo','ELOGIO','elogios'],['com','COMENTÁRIO','comentarios']];
-  const items=[];
-  cats.forEach(([cls,label,field])=>rows.forEach(r=>{const t=String(r[field]||'').trim();if(t)items.push({cls,label,t,setor:r.setor,data:r.data})}));
-  $('manifList').innerHTML=items.length?items.map(i=>`<div class="manif-item"><span class="tag ${i.cls}">${i.label}</span><div><p>${esc(i.t)}</p><small>${esc(i.setor||'')}${i.data?' · '+i.data.split('-').reverse().join('/'):''}</small></div></div>`).join(''):'<div class="empty">Nenhuma manifestação no período. 🎉</div>';
+function rManif(rr){
+  const cats=[['t-rc','RECLAMAÇÃO','reclamacoes'],['t-sg','SUGESTÃO','sugestoes'],['t-el','ELOGIO','elogios'],['t-cm','COMENTÁRIO','comentarios']];
+  const items=[];cats.forEach(([cls,lbl,f])=>rr.forEach(r=>{const t=String(r[f]||'').trim();if(t)items.push({cls,lbl,t,setor:r.setor,data:r.data})}));
+  $('manifList').innerHTML=items.length?items.map(i=>`<div style="display:flex;gap:12px;align-items:flex-start;padding:13px 15px;border:1px solid #4a4a4a;border-radius:12px;background:#2f2f2f"><span class="tag ${i.cls}" style="margin-top:1px">${i.lbl}</span><div><p style="margin:0;font-size:13.5px;color:#ececec">${esc(i.t)}</p><small style="color:#555;font-size:11.5px;display:block;margin-top:3px">${esc(i.setor||'')}${i.data?' · '+i.data.split('-').reverse().join('/'):''}</small></div></div>`).join(''):'<div class="empty">Nenhuma manifestação no período. 🎉</div>';
 }
 function renderTable(){
   const q=($('q')?.value||'').toLowerCase();
-  const rows=rowsFor($('gMes').value,$('gSetor').value).filter(r=>!q||JSON.stringify(r).toLowerCase().includes(q)).slice(-300).reverse();
-  $('tbody').innerHTML=rows.length?rows.map(r=>{
-    const x=+r.nps, cls=isNaN(x)?'mut':x>=9?'ok':x>=7?'warn':'bad';
-    return`<tr><td class="num">${r.data?r.data.split('-').reverse().join('/'):''}</td><td>${esc(r.setor)}</td><td class="num">${esc(r.pront)}</td><td>${esc(r.tipo)}</td><td>${esc(r.sexo)}</td><td class="num">${Number(r.taxaSatisfacao||0).toFixed(1).replace('.',',')}%</td><td><span class="dot ${cls}"></span><span class="num">${r.nps??''}</span></td><td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc([r.reclamacoes,r.sugestoes,r.elogios,r.comentarios].filter(Boolean)[0]||'')}</td><td><button class="btn" style="padding:5px 10px;font-size:12px" onclick='editRecord(${JSON.stringify(r.rowNumber)})'>Editar</button></td></tr>`;
-  }).join(''):'<tr><td colspan="9" class="empty">Nenhum registro no período selecionado.</td></tr>';
+  const rr=rows($('gMes').value,$('gSetor').value).filter(r=>!q||JSON.stringify(r).toLowerCase().includes(q)).slice(-300).reverse();
+  $('tbody').innerHTML=rr.length?rr.map(r=>{
+    const x=+r.nps,cls=isNaN(x)?'d-mt':x>=9?'d-ok':x>=7?'d-w':'d-bd';
+    return`<tr><td>${r.data?r.data.split('-').reverse().join('/'):''}</td><td>${esc(r.setor)}</td><td>${esc(r.pront)}</td><td>${esc(r.tipo)}</td><td>${esc(r.sexo)}</td><td>${Number(r.taxaSatisfacao||0).toFixed(1).replace('.',',')}%</td><td><span class="dot ${cls}"></span>${r.nps??''}</td><td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc([r.reclamacoes,r.sugestoes,r.elogios,r.comentarios].filter(Boolean)[0]||'')}</td><td><button class="btn" style="padding:4px 10px;font-size:12px" onclick='editRecord(${JSON.stringify(r.rowNumber)})'>Editar</button></td></tr>`;
+  }).join(''):'<tr><td colspan="9" class="empty">Sem registros.</td></tr>';
 }
-function renderSaidasTbl(){
-  const rows=[...state.saidas].sort((a,b)=>(b.mes+b.setor).localeCompare(a.mes+a.setor));
-  $('saidasBody').innerHTML=rows.length?rows.map(s=>{
-    const pesq=state.records.filter(r=>monthOf(r)===s.mes&&r.setor===s.setor).length;
-    const ap=s.saidas?pesq/s.saidas*100:null;
-    const cls=ap==null?'mut':ap>=META_APLICACAO?'ok':ap>=META_APLICACAO-10?'warn':'bad';
-    return`<tr><td>${mesLabel(s.mes)}</td><td>${esc(s.setor)}</td><td class="num">${s.saidas}</td><td class="num">${pesq}</td><td><span class="dot ${cls}"></span><span class="num">${fmt(ap)}</span></td><td style="white-space:nowrap"><button class="btn" style="padding:5px 10px;font-size:12px" onclick="editSaida(${s.rowNumber})">Editar</button> <button class="btn" style="padding:5px 10px;font-size:12px" onclick="removeSaida(${s.rowNumber})">Excluir</button></td></tr>`;
-  }).join(''):'<tr><td colspan="6" class="empty">Nenhuma saída registrada ainda.</td></tr>';
+function rSaidas(){
+  const rr=[...ST.saidas].sort((a,b)=>(b.mes+b.setor).localeCompare(a.mes+a.setor));
+  $('saidasBody').innerHTML=rr.length?rr.map(s=>{
+    const p=ST.records.filter(r=>mo(r)===s.mes&&r.setor===s.setor).length;
+    const ap=s.saidas?p/s.saidas*100:null;
+    const cls=ap==null?'d-mt':ap>=META_A?'d-ok':ap>=META_A-10?'d-w':'d-bd';
+    return`<tr><td>${ml(s.mes)}</td><td>${esc(s.setor)}</td><td>${s.saidas}</td><td>${p}</td><td><span class="dot ${cls}"></span>${fmt(ap)}</td><td style="white-space:nowrap"><button class="btn" style="padding:4px 10px;font-size:12px" onclick="editSaida(${s.rowNumber})">Editar</button> <button class="btn" style="padding:4px 10px;font-size:12px" onclick="rmSaida(${s.rowNumber})">Excluir</button></td></tr>`;
+  }).join(''):'<tr><td colspan="6" class="empty">Nenhuma saída registrada.</td></tr>';
 }
-
-/* ── Relatório mensal ── */
 function renderReport(){
-  const mes=$('repMes').value, out=$('reportBody');
-  if(!mes){out.innerHTML='<div class="empty">Sem dados para o período selecionado.</div>';return}
-  const rows=state.records.filter(r=>monthOf(r)===mes);
-  if(!rows.length){out.innerHTML='<div class="empty">Nenhuma pesquisa registrada em '+esc(mesLabel(mes))+'.</div>';return}
-  const setores=[...new Set(rows.map(r=>r.setor||'SEM SETOR'))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
-  const sG=summary(rows), saidasMes=state.saidas.filter(s=>s.mes===mes);
-  const totS=saidasMes.reduce((t,x)=>t+x.saidas,0), apG=totS?sG.total/totS*100:null;
-  let h=`<h2>Pesquisa de Satisfação — ${esc(mesLabel(mes))}</h2>
-  <p>A pesquisa de satisfação tem por objetivo avaliar a satisfação dos usuários atendidos no Hospital Universitário do Ceará – HUC, priorizando a percepção do cuidado centrado no paciente e as oportunidades de melhorias na prestação dos serviços ofertados. A meta de aplicação da pesquisa de satisfação é de 60% (sessenta por cento), considerando as saídas hospitalares (altas, transferências externas e óbitos) do mês de referência. O indicador de satisfação tem como meta alcançar 90% de satisfação.</p>
-  <p>Os dados quantitativos descritos por setor encontram-se de forma detalhada na tabela abaixo:</p>
-  <table><thead><tr><th>SETOR</th><th>SAÍDAS</th><th>PESQUISAS APLICADAS</th><th>% DE APLICAÇÃO</th><th>SATISFAÇÃO OBTIDA</th><th>NPS</th></tr></thead><tbody>`;
-  const linha=(nome,sd,s,bold)=>{const ap=sd?s.total/sd*100:null;return`<tr${bold?' style="font-weight:700"':''}><td>${esc(nome)}</td><td class="c num">${sd||'—'}</td><td class="c num">${s.total}</td><td class="c num ${ap!=null&&ap<META_APLICACAO?'pct-bad':''}">${fmt(ap)}</td><td class="c num ${s.sat!=null&&s.sat<META_SATISFACAO?'pct-bad':''}">${fmt(s.sat)}</td><td class="c num">${fmt(s.nps)}</td></tr>`};
-  setores.forEach(st=>{const sr=rows.filter(r=>(r.setor||'SEM SETOR')===st);h+=linha(st,saidasMes.filter(x=>x.setor===st).reduce((t,x)=>t+x.saidas,0),summary(sr))});
-  h+=linha('HUC',totS,sG,true)+`</tbody></table>
-  <p class="footnote">*SAÍDAS: altas, transferências externas e óbitos. PORCENTAGEM dos critérios: score ponderado (ÓTIMO×3 + BOM×2 + REGULAR×1 + RUIM×(−1)) ÷ (avaliações válidas × 3).</p>`;
-  setores.forEach(st=>{
-    const sr=rows.filter(r=>(r.setor||'SEM SETOR')===st), s=summary(sr);
-    const sd=saidasMes.filter(x=>x.setor===st).reduce((t,x)=>t+x.saidas,0), ap=sd?s.total/sd*100:null;
-    h+=`<h3>${esc(st)}</h3><p>No setor ${esc(st)}, ${sd?`ocorreram ${sd} saídas, com `:''}${s.total} pesquisas de satisfação realizadas${ap!=null?`, totalizando ${fmt(ap)} de aplicação`:''}. A satisfação dos usuários no setor foi de ${fmt(s.sat)}.${s.nps!=null?` O NPS foi de ${fmt(s.nps)}, sendo classificado na ${npsZona(s.nps)}.`:''} As pesquisas são respondidas pelo paciente, pelo acompanhante ou de forma colaborativa (paciente + acompanhante).</p>`;
-    REPORT_BLOCKS.forEach(([,titulo,criterios,obsField])=>{
+  const mes=$('repMes').value,out=$('reportBody');
+  if(!mes){out.innerHTML='<div class="empty">Sem dados.</div>';return}
+  const rr=ST.records.filter(r=>mo(r)===mes);
+  if(!rr.length){out.innerHTML='<div class="empty">Nenhuma pesquisa em '+esc(ml(mes))+'.</div>';return}
+  const sets=[...new Set(rr.map(r=>r.setor||'SEM SETOR'))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const sG=sum(rr),sm=ST.saidas.filter(s=>s.mes===mes);
+  const tS=sm.reduce((t,x)=>t+x.saidas,0),apG=tS?sG.total/tS*100:null;
+  let h=`<h2>Pesquisa de Satisfação — ${esc(ml(mes))}</h2>
+  <p>A pesquisa de satisfação tem por objetivo avaliar a satisfação dos usuários atendidos no Hospital Universitário do Ceará – HUC, priorizando a percepção do cuidado centrado no paciente e as oportunidades de melhorias na prestação dos serviços ofertados. A meta de aplicação é de 60%, considerando as saídas hospitalares (altas, transferências externas e óbitos). O indicador de satisfação tem meta de 90%.</p>
+  <p>Dados quantitativos por setor:</p>
+  <table><thead><tr><th>SETOR</th><th>SAÍDAS</th><th>PESQUISAS APLIC.</th><th>% APLICAÇÃO</th><th>SATISFAÇÃO</th><th>NPS</th></tr></thead><tbody>`;
+  const lr=(nm,sd,s,bold)=>{const ap=sd?s.total/sd*100:null;return`<tr${bold?' style="font-weight:700"':''}><td>${esc(nm)}</td><td class="c">${sd||'—'}</td><td class="c">${s.total}</td><td class="c ${ap!=null&&ap<META_A?'pbd':''}">${fmt(ap)}</td><td class="c ${s.sat!=null&&s.sat<META_S?'pbd':''}">${fmt(s.sat)}</td><td class="c">${fmt(s.nps)}</td></tr>`};
+  sets.forEach(st=>{const sr=rr.filter(r=>(r.setor||'SEM SETOR')===st);h+=lr(st,sm.filter(x=>x.setor===st).reduce((t,x)=>t+x.saidas,0),sum(sr))});
+  h+=lr('HUC',tS,sG,true)+`</tbody></table><p class="fn">*SAÍDAS: altas, transferências externas e óbitos. PORCENTAGEM: score ponderado (ÓTIMO×3+BOM×2+REGULAR×1+RUIM×(−1))÷(válidos×3).</p>`;
+  sets.forEach(st=>{
+    const sr=rr.filter(r=>(r.setor||'SEM SETOR')===st),s=sum(sr);
+    const sd=sm.filter(x=>x.setor===st).reduce((t,x)=>t+x.saidas,0),ap=sd?s.total/sd*100:null;
+    h+=`<h3>${esc(st)}</h3><p>No setor ${esc(st)}, ${sd?`ocorreram ${sd} saídas, com `:''}${s.total} pesquisas realizadas${ap!=null?`, totalizando ${fmt(ap)} de aplicação`:''}. Satisfação de ${fmt(s.sat)}.${s.nps!=null?` NPS de ${fmt(s.nps)}, ${zona(s.nps)}.`:''} Respondidas pelo paciente, acompanhante ou de forma colaborativa.</p>`;
+    BLOCKS.forEach(([,titulo,crit,obs])=>{
       h+=`<h4>${titulo}</h4><table><thead><tr><th>CRITÉRIOS AVALIADOS</th><th>ÓTIMO</th><th>BOM</th><th>REGULAR</th><th>RUIM</th><th>N/A</th><th>TOTAL</th><th>PORCENTAGEM</th></tr></thead><tbody>`;
-      criterios.forEach(([f,label])=>{
-        const c=countsFor(sr,f), pct=weightedPct(c);
-        const cls=pct==null?'':pct<80?'pct-bad':pct<META_SATISFACAO?'pct-warn':'';
-        h+=`<tr><td>${label.toUpperCase()}</td><td class="c num">${c['ÓTIMO']}</td><td class="c num">${c['BOM']}</td><td class="c num">${c['REGULAR']}</td><td class="c num">${c['RUIM']}</td><td class="c num">${c['N/A']}</td><td class="c num">${sr.length}</td><td class="c num ${cls}">${pct==null?'—':fmt(pct,2)}</td></tr>`;
-      });
+      crit.forEach(([f,lbl])=>{const c=cf(sr,f),p=wp(c),cls=p==null?'':p<80?'pbd':p<META_S?'pwn':'';
+        h+=`<tr><td>${lbl.toUpperCase()}</td><td class="c">${c['ÓTIMO']}</td><td class="c">${c['BOM']}</td><td class="c">${c['REGULAR']}</td><td class="c">${c['RUIM']}</td><td class="c">${c['N/A']}</td><td class="c">${sr.length}</td><td class="c ${cls}">${p==null?'—':fmt(p,2)}</td></tr>`});
       h+='</tbody></table>';
-      const obs=sr.map(r=>String(r[obsField]||'').trim()).filter(Boolean);
-      if(obs.length)h+='<div class="mn"><b>Observações:</b></div>'+obs.map((o,i)=>`<div class="mn">${i+1} - ${esc(o)}</div>`).join('');
+      const ob=sr.map(r=>String(r[obs]||'').trim()).filter(Boolean);
+      if(ob.length)h+='<div class="mn"><b>Observações:</b></div>'+ob.map((o,i)=>`<div class="mn">${i+1} - ${esc(o)}</div>`).join('');
     });
-    [['RECLAMAÇÃO','reclamacoes'],['SUGESTÃO','sugestoes'],['ELOGIO','elogios'],['COMENTÁRIO','comentarios']].forEach(([titulo,f])=>{
-      const itens=sr.map(r=>String(r[f]||'').trim()).filter(Boolean);
-      if(itens.length)h+=`<div class="mn"><b>${titulo}:</b></div>`+itens.map((t,i)=>`<div class="mn">${i+1} - ${esc(t)}</div>`).join('');
+    [['RECLAMAÇÃO','reclamacoes'],['SUGESTÃO','sugestoes'],['ELOGIO','elogios'],['COMENTÁRIO','comentarios']].forEach(([t,f])=>{
+      const it=sr.map(r=>String(r[f]||'').trim()).filter(Boolean);
+      if(it.length)h+=`<div class="mn"><b>${t}:</b></div>`+it.map((x,i)=>`<div class="mn">${i+1} - ${esc(x)}</div>`).join('');
     });
   });
-  h+=`<br><br><p style="text-align:center">_____________________________________&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_____________________________________<br>DIREÇÃO DE GESTÃO DO CUIDADO&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;COORDENAÇÃO SERVIÇO SOCIAL</p>`;
+  h+=`<br><br><p style="text-align:center;color:#b4b4b4">_____________________________________&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_____________________________________<br>DIREÇÃO DE GESTÃO DO CUIDADO&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;COORDENAÇÃO SERVIÇO SOCIAL</p>`;
   out.innerHTML=h;
 }
-
-/* ── Formulário ── */
-function buildRatingFields(){
-  $('rateBlocks').innerHTML=REPORT_BLOCKS.map(([titulo,,criterios,obsField])=>`
-    <div class="rate-block"><h4>${titulo}</h4>
-      ${criterios.map(([f,label])=>`<div class="rate-row"><span>${label}</span><span class="seg">${RATINGS.map((r,i)=>`<input type="radio" name="${f}" id="${f}_${i}" value="${r}" ${i===0?'checked':''}><label for="${f}_${i}">${r==='ÓTIMO'?'Ótimo':r==='BOM'?'Bom':r==='REGULAR'?'Regular':r==='RUIM'?'Ruim':'N/A'}</label>`).join('')}</span></div>`).join('')}
-      <div class="field" style="margin-top:12px"><label>Observações</label><textarea id="${obsField}"></textarea></div>
+function buildForm(){
+  $('rateBlocks').innerHTML=BLOCKS.map(([titulo,,crit,obs])=>`
+    <div class="bg-s3 border border-s4 rounded-2xl p-5">
+      <h4 class="text-sm font-bold text-sub mb-3">${titulo}</h4>
+      ${crit.map(([f,l])=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(74,74,74,.5);flex-wrap:wrap"><span style="font-size:13px;color:#b4b4b4">${l}</span><span class="seg">${RATINGS.map((r,i)=>`<input type="radio" name="${f}" id="${f}_${i}" value="${r}" ${i===0?'checked':''}><label for="${f}_${i}">${r==='ÓTIMO'?'Ótimo':r==='BOM'?'Bom':r==='REGULAR'?'Regular':r==='RUIM'?'Ruim':'N/A'}</label>`).join('')}</span></div>`).join('')}
+      <div style="margin-top:14px"><label class="fl">Observações</label><textarea id="${obs}" class="fta"></textarea></div>
     </div>`).join('');
 }
 function getForm(){
   const ids=['setor','pront','data','tipo','dn','idade','sexo','nps','obsAcolhimento','obsAssistencia','obsServicos','sugestoes','reclamacoes','comentarios','elogios','entrevistador','encaminhamentos'];
-  const o={rowNumber:$('rowNumber').value};
-  ids.forEach(id=>o[id]=$(id).value);
-  RATING_FIELDS.forEach(f=>{o[f]=document.querySelector(`input[name="${f}"]:checked`)?.value||''});
-  return o;
+  const o={rowNumber:$('rowNumber').value};ids.forEach(id=>o[id]=$(id).value);
+  RF.forEach(f=>{o[f]=document.querySelector(`input[name="${f}"]:checked`)?.value||''});return o;
 }
 function setForm(r={}){
   ['setor','pront','data','tipo','dn','idade','sexo','nps','obsAcolhimento','obsAssistencia','obsServicos','sugestoes','reclamacoes','comentarios','elogios','entrevistador','encaminhamentos'].forEach(id=>{if($(id))$(id).value=r[id]||''});
-  RATING_FIELDS.forEach(f=>{
-    const v=String(r[f]||'ÓTIMO').toUpperCase();
-    const el=document.querySelector(`input[name="${f}"][value="${CSS.escape(v)}"]`)||document.querySelector(`input[name="${f}"]`);
-    if(el)el.checked=true;
-  });
+  RF.forEach(f=>{const v=String(r[f]||'ÓTIMO').toUpperCase();const el=document.querySelector(`input[name="${f}"][value="${CSS.escape(v)}"]`)||document.querySelector(`input[name="${f}"]`);if(el)el.checked=true});
   $('rowNumber').value=r.rowNumber||'';
 }
-
-/* ── Backend ── */
-function reload(){setLoading(true);google.script.run.withSuccessHandler(data=>{state=data;state.saidas=state.saidas||[];hydrateControls();renderAll();setLoading(false)}).withFailureHandler(err=>{setLoading(false);toast(err.message||err)}).getInitialData()}
-function saveRecord(e){e.preventDefault();setLoading(true);google.script.run.withSuccessHandler(res=>{setLoading(false);toast(res.message);setForm({});reload();showTab('registros')}).withFailureHandler(err=>{setLoading(false);toast(err.message||err)}).saveRecord(getForm())}
-function editRecord(rowNumber){const r=state.records.find(x=>x.rowNumber===rowNumber);if(!r)return;setForm(r);showTab('novo')}
-function saveSaida(e){e.preventDefault();const payload={rowNumber:$('sRowNumber').value,mes:$('sMes').value,setor:$('sSetor').value.trim(),saidas:$('sSaidas').value};if(!payload.mes||!payload.setor)return toast('Informe mês e setor.');setLoading(true);google.script.run.withSuccessHandler(res=>{setLoading(false);toast(res.message);$('sRowNumber').value='';$('formSaida').reset();reload()}).withFailureHandler(err=>{setLoading(false);toast(err.message||err)}).saveSaida(payload)}
-function editSaida(rowNumber){const s=state.saidas.find(x=>x.rowNumber===rowNumber);if(!s)return;$('sRowNumber').value=s.rowNumber;$('sMes').value=s.mes;$('sSetor').value=s.setor;$('sSaidas').value=s.saidas;showTab('saidas')}
-function removeSaida(rowNumber){if(!confirm('Excluir este registro de saídas?'))return;setLoading(true);google.script.run.withSuccessHandler(res=>{setLoading(false);toast(res.message);reload()}).withFailureHandler(err=>{setLoading(false);toast(err.message||err)}).deleteSaida(rowNumber)}
-function downloadCSV(){google.script.run.withSuccessHandler(csv=>{const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pesquisa_satisfacao_huc.csv';a.click();URL.revokeObjectURL(a.href)}).exportCsv()}
-
-buildRatingFields();reload();
+function reload(){load(true);google.script.run.withSuccessHandler(data=>{ST=data;ST.saidas=ST.saidas||[];hydrate();renderAll();load(false)}).withFailureHandler(err=>{load(false);toast(err.message||err)}).getInitialData()}
+function saveRecord(e){e.preventDefault();load(true);google.script.run.withSuccessHandler(res=>{load(false);toast(res.message);setForm({});reload();showTab('registros')}).withFailureHandler(err=>{load(false);toast(err.message||err)}).saveRecord(getForm())}
+function editRecord(rn){const r=ST.records.find(x=>x.rowNumber===rn);if(!r)return;setForm(r);showTab('novo')}
+function saveSaida(e){e.preventDefault();const p={rowNumber:$('sRowNumber').value,mes:$('sMes').value,setor:$('sSetor').value.trim(),saidas:$('sSaidas').value};if(!p.mes||!p.setor)return toast('Informe mês e setor.');load(true);google.script.run.withSuccessHandler(res=>{load(false);toast(res.message);$('sRowNumber').value='';$('formSaida').reset();reload()}).withFailureHandler(err=>{load(false);toast(err.message||err)}).saveSaida(p)}
+function editSaida(rn){const s=ST.saidas.find(x=>x.rowNumber===rn);if(!s)return;$('sRowNumber').value=s.rowNumber;$('sMes').value=s.mes;$('sSetor').value=s.setor;$('sSaidas').value=s.saidas;showTab('saidas')}
+function rmSaida(rn){if(!confirm('Excluir?'))return;load(true);google.script.run.withSuccessHandler(res=>{load(false);toast(res.message);reload()}).withFailureHandler(err=>{load(false);toast(err.message||err)}).deleteSaida(rn)}
+function downloadCSV(){google.script.run.withSuccessHandler(csv=>{const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pesquisa_huc.csv';a.click();URL.revokeObjectURL(a.href)}).exportCsv()}
+buildForm();reload();
 </script>
 </body>
 </html>
