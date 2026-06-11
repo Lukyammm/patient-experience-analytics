@@ -1060,15 +1060,19 @@ function setForm(r={}){
   RF.forEach(f=>{const v=String(r[f]||'ÓTIMO').toUpperCase();const el=document.querySelector(`input[name="${f}"][value="${CSS.escape(v)}"]`)||document.querySelector(`input[name="${f}"]`);if(el)el.checked=true});
   $('rowNumber').value=r.rowNumber||'';
 }
+// Registros otimistas ainda não confirmados pelo servidor — re-mesclados
+// sempre que dados frescos substituem ST, para nunca sumirem da tela
+let PENDING=[];
+function applyData(data){
+  ST=data;ST.records=ST.records||[];ST.saidas=ST.saidas||[];ST.cadastros=ST.cadastros||[];
+  ST.lookups=ST.lookups||{};ST.lookups.entrevistadores=ST.lookups.entrevistadores||[];
+  PENDING.forEach(rec=>{if(!ST.records.some(x=>x.rowNumber===rec.rowNumber))ST.records.push(rec)});
+  try{sessionStorage.setItem('psq',JSON.stringify(ST))}catch(e){}
+}
 function reload(){
   load(true);
   google.script.run
-    .withSuccessHandler(data=>{
-      ST=data;ST.saidas=ST.saidas||[];ST.cadastros=ST.cadastros||[];
-      ST.lookups.entrevistadores=ST.lookups.entrevistadores||[];
-      try{sessionStorage.setItem('psq',JSON.stringify(ST))}catch(e){}
-      hydrate();renderAll();load(false);
-    })
+    .withSuccessHandler(data=>{applyData(data);hydrate();renderAll();load(false)})
     .withFailureHandler(err=>{load(false);toast(err.message||err)})
     .getInitialData();
 }
@@ -1092,10 +1096,21 @@ function saveRecord(e){
   const prevIdx=ST.records.findIndex(x=>x.rowNumber===tempId);
   const prev=prevIdx>=0?ST.records[prevIdx]:null;
   if(prevIdx>=0) ST.records[prevIdx]=rec; else ST.records.push(rec);
+  PENDING.push(rec); // protege contra reloads em andamento sobrescreverem ST
   try{sessionStorage.setItem('psq',JSON.stringify(ST))}catch(_){}
 
   // Instant feedback — clear form, jump to registros, confirm
   setForm({});
+  // Se o filtro de período atual esconderia o registro recém-salvo,
+  // muda para o mês dele para que apareça na hora
+  const recM=mo(rec);
+  if(recM){
+    const selM=$('gMes').value,pmm=periodMonths();
+    if((selM&&selM!==recM)||(!selM&&pmm&&!pmm.includes(recM))){
+      if([...$('gMes').options].some(o=>o.value===recM))$('gMes').value=recM;
+      else{$('gMes').value='';PERIOD=''}
+    }
+  }
   renderAll();
   showTab('registros');
   toast(editing?'Registro atualizado.':'Registro salvo.');
@@ -1103,6 +1118,7 @@ function saveRecord(e){
   // Persist in the background; reconcile the real row number when it returns
   google.script.run
     .withSuccessHandler(res=>{
+      PENDING=PENDING.filter(x=>x!==rec);
       const i=ST.records.findIndex(x=>x.rowNumber===tempId);
       if(i>=0){
         if(res&&res.record){res.record._saving=false;ST.records[i]=res.record;}
@@ -1113,6 +1129,7 @@ function saveRecord(e){
       }
     })
     .withFailureHandler(err=>{
+      PENDING=PENDING.filter(x=>x!==rec);
       const i=ST.records.findIndex(x=>x.rowNumber===tempId);
       if(i>=0){if(prev)ST.records[i]=prev;else ST.records.splice(i,1);}
       try{sessionStorage.setItem('psq',JSON.stringify(ST))}catch(_){}
@@ -1128,7 +1145,7 @@ function rmSaida(rn){if(!confirm('Excluir?'))return;load(true);google.script.run
 function downloadCSV(){google.script.run.withSuccessHandler(csv=>{const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pesquisa_huc.csv';a.click();URL.revokeObjectURL(a.href)}).exportCsv()}
 buildForm();buildNps();buildQuickPeriods();
 // Show cached data immediately while fresh data loads
-try{const c=sessionStorage.getItem('psq');if(c){ST=JSON.parse(c);ST.saidas=ST.saidas||[];ST.cadastros=ST.cadastros||[];ST.lookups.entrevistadores=ST.lookups.entrevistadores||[];hydrate();renderAll()}}catch(e){}
+try{const c=sessionStorage.getItem('psq');if(c){const d=JSON.parse(c);d.records=(d.records||[]).filter(r=>!String(r.rowNumber).startsWith('tmp_'));d.records.forEach(r=>delete r._saving);applyData(d);hydrate();renderAll()}}catch(e){}
 reload();
 </script>
 </body>
