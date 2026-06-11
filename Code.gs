@@ -403,15 +403,12 @@ function backfillSatisfacaoBlocks() {
 function ocrPdfViaVisionApi(base64Content) {
   const props = PropertiesService.getScriptProperties();
   const keyJson = props.getProperty('GOOGLE_CLOUD_KEY');
-  Logger.log('DEBUG: keyJson exists: ' + !!keyJson);
-  Logger.log('DEBUG: keyJson length: ' + (keyJson ? keyJson.length : 0));
   if (!keyJson) throw new Error('Chave Google Cloud não configurada.');
 
   let key;
   try {
     key = JSON.parse(keyJson);
   } catch (e) {
-    Logger.log('DEBUG: JSON parse error: ' + e);
     throw new Error('Erro ao processar chave: ' + e.message);
   }
   const accessToken = getGoogleAccessToken_(key);
@@ -452,12 +449,12 @@ function getGoogleAccessToken_(serviceAccountKey) {
     iat: now
   };
 
-  const headerEncoded = Utilities.base64Encode(JSON.stringify(header)).replace(/=/g, '');
-  const claimEncoded = Utilities.base64Encode(JSON.stringify(claim)).replace(/=/g, '');
+  const headerEncoded = Utilities.base64EncodeWebSafe(JSON.stringify(header)).replace(/=/g, '');
+  const claimEncoded = Utilities.base64EncodeWebSafe(JSON.stringify(claim)).replace(/=/g, '');
   const signatureInput = headerEncoded + '.' + claimEncoded;
 
   const signature = Utilities.computeRsaSha256Signature(signatureInput, serviceAccountKey.private_key);
-  const signatureEncoded = Utilities.base64Encode(signature).replace(/=/g, '');
+  const signatureEncoded = Utilities.base64EncodeWebSafe(signature).replace(/=/g, '');
 
   const jwt = signatureInput + '.' + signatureEncoded;
 
