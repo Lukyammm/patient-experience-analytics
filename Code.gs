@@ -137,6 +137,11 @@ function getSaidasSheet_() {
   return sheet;
 }
 
+// Critérios de cada bloco do formulário — usados para as sub-taxas K/T/AA
+const BLOCO_ACOLHIMENTO = ['gentilezaAcolhimento','agilidade','clareza'];
+const BLOCO_ASSISTENCIA = ['gentilezaAssistencia','identificacao','intimidade','horarioDescanso','esclarecimento','cuidados','confianca'];
+const BLOCO_SERVICOS = ['acesso','acomodacao','limpeza','enxoval','alimentacao','locomocao'];
+
 function saveRecord(payload) {
   const sheet = getSheet_();
   ensureHeader_(sheet);
@@ -156,7 +161,22 @@ function saveRecord(payload) {
   row[COL.totalConsiderado - 1] = total;
   row[COL.taxaSatisfacao - 1] = total ? (otimo + bom) / total : 0;
 
+  // Sub-taxas por bloco (colunas K, T, AA — SATISFAÇÃO I/II/III)
+  const blockSat = keys => {
+    let ob = 0, valid = 0;
+    keys.forEach(k => {
+      const v = String(payload[k] || '').toUpperCase();
+      if (v === 'ÓTIMO' || v === 'BOM') { ob++; valid++; }
+      else if (v === 'REGULAR' || v === 'RUIM') valid++;
+    });
+    return valid ? ob / valid : 0;
+  };
+  row[COL.satisfacao1 - 1] = blockSat(BLOCO_ACOLHIMENTO);
+  row[COL.satisfacao2 - 1] = blockSat(BLOCO_ASSISTENCIA);
+  row[COL.satisfacao3 - 1] = blockSat(BLOCO_SERVICOS);
+
   sheet.getRange(rowNumber, 1, 1, LAST_COL).setValues([row]);
+  sheet.getRangeList([`K${rowNumber}`, `T${rowNumber}`, `AB${rowNumber}`, `AP${rowNumber}`]).setNumberFormat('0.00%');
 
   const saved = rowToObject_(row.map(v => v === '' ? '' : String(v)), rowNumber);
   return { ok: true, rowNumber, record: saved, message: isEdit ? 'Registro atualizado.' : 'Registro salvo.' };
@@ -221,24 +241,20 @@ function objectToRow_(p) {
   });
   row[COL.data-1] = parseDateOrText_(p.data);
   row[COL.dn-1] = parseDateOrText_(p.dn);
+  // Normalização: evita variações livres (MASC/masculino/fem...) na planilha
+  row[COL.sexo-1] = normSexo_(p.sexo);
+  row[COL.setor-1] = String(p.setor || '').trim().toUpperCase();
+  row[COL.tipo-1] = String(p.tipo || '').trim().toUpperCase();
+  row[COL.entrevistador-1] = String(p.entrevistador || '').trim().toUpperCase();
   return row;
 }
 
-function applyRowFormulas_(sheet, r) {
-  sheet.getRange(r, COL.satisfacao1).setFormula(`=IFERROR((COUNTIF(H${r}:J${r};"ÓTIMO")+COUNTIF(H${r}:J${r};"BOM"))/(COUNTIF(H${r}:J${r};"ÓTIMO")+COUNTIF(H${r}:J${r};"BOM")+COUNTIF(H${r}:J${r};"REGULAR")+COUNTIF(H${r}:J${r};"RUIM"));0)`);
-  sheet.getRange(r, COL.satisfacao2).setFormula(`=IFERROR((COUNTIF(M${r}:S${r};"ÓTIMO")+COUNTIF(M${r}:S${r};"BOM"))/(COUNTIF(M${r}:S${r};"ÓTIMO")+COUNTIF(M${r}:S${r};"BOM")+COUNTIF(M${r}:S${r};"REGULAR")+COUNTIF(M${r}:S${r};"RUIM"));0)`);
-  sheet.getRange(r, COL.satisfacao3).setFormula(`=IFERROR((COUNTIF(V${r}:AA${r};"ÓTIMO")+COUNTIF(V${r}:AA${r};"BOM"))/(COUNTIF(V${r}:AA${r};"ÓTIMO")+COUNTIF(V${r}:AA${r};"BOM")+COUNTIF(V${r}:AA${r};"REGULAR")+COUNTIF(V${r}:AA${r};"RUIM"));0)`);
-  sheet.getRange(r, COL.otimo).setFormula(`=COUNTIF(H${r}:AB${r};"ÓTIMO")`);
-  sheet.getRange(r, COL.bom).setFormula(`=COUNTIF(H${r}:AB${r};"BOM")`);
-  sheet.getRange(r, COL.regular).setFormula(`=COUNTIF(H${r}:AB${r};"REGULAR")`);
-  sheet.getRange(r, COL.ruim).setFormula(`=COUNTIF(H${r}:AB${r};"RUIM")`);
-  sheet.getRange(r, COL.na).setFormula(`=COUNTIF(H${r}:AB${r};"N/A")`);
-  sheet.getRange(r, COL.totalConsiderado).setFormula(`=SUM(AJ${r}:AM${r})`);
-  sheet.getRange(r, COL.taxaSatisfacao).setFormula(`=IFERROR((AJ${r}+AK${r})/AO${r};0)`);
-  sheet.getRange(r, COL.satisfacao1, 1, 1).setNumberFormat('0.00%');
-  sheet.getRange(r, COL.satisfacao2, 1, 1).setNumberFormat('0.00%');
-  sheet.getRange(r, COL.satisfacao3, 1, 1).setNumberFormat('0.00%');
-  sheet.getRange(r, COL.taxaSatisfacao, 1, 1).setNumberFormat('0.00%');
+function normSexo_(v) {
+  const u = String(v || '').trim().toUpperCase();
+  if (['M', 'MASC', 'MASCULINO', 'HOMEM'].includes(u)) return 'M';
+  if (['F', 'FEM', 'FEMININO', 'MULHER'].includes(u)) return 'F';
+  if (u === 'OUTRO') return 'Outro';
+  return String(v || '').trim();
 }
 
 function nextDataRow_(sheet) {
