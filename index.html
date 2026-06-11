@@ -691,9 +691,10 @@ let ST={records:[],saidas:[],cadastros:[],lookups:{setores:[],tipos:[],sexos:[],
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
-let _toastTimer=null;
-function toast(msg){const t=$('toast');$('toastMsg').textContent=msg;t.style.opacity='1';t.style.transform='translate(-50%,0)';clearTimeout(_toastTimer);_toastTimer=setTimeout(closeToast,3000)}
-function closeToast(){const t=$('toast');t.style.opacity='0';t.style.transform='translate(-50%,8px)'}
+let _toastTimer=null,_toastQ=[];
+function toast(msg){if($('toast').style.opacity==='1'){_toastQ.push(msg);return;}_showToast(msg);}
+function _showToast(msg){const t=$('toast');$('toastMsg').textContent=msg;t.style.opacity='1';t.style.transform='translate(-50%,0)';clearTimeout(_toastTimer);_toastTimer=setTimeout(closeToast,3000);}
+function closeToast(){const t=$('toast');t.style.opacity='0';t.style.transform='translate(-50%,8px)';if(_toastQ.length)setTimeout(()=>{if(_toastQ.length)_showToast(_toastQ.shift())},350);}
 function load(v){$('topbar').classList.toggle('on',v)}
 function showTab(tab){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));$(tab).classList.add('active');document.querySelectorAll('.nav-b').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab))}
 document.querySelectorAll('.nav-b').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
@@ -950,6 +951,7 @@ function rSetores(){
 function rManif(rr){
   const cats=[['t-rc','RECLAMAÇÃO','reclamacoes'],['t-sg','SUGESTÃO','sugestoes'],['t-el','ELOGIO','elogios'],['t-cm','COMENTÁRIO','comentarios']];
   const items=[];cats.forEach(([cls,lbl,f])=>rr.forEach(r=>{const t=String(r[f]||'').trim();if(t)items.push({cls,lbl,t,setor:r.setor,data:r.data})}));
+  items.sort((a,b)=>String(b.data||'').localeCompare(String(a.data||'')));
   $('manifList').innerHTML=items.length?items.map(i=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:11px 14px;border:1px solid var(--s4);border-radius:10px"><span class="tag ${i.cls}" style="margin-top:2px;flex-shrink:0">${i.lbl}</span><div style="min-width:0"><p style="margin:0;font-size:13px;color:var(--ink);line-height:1.5">${esc(i.t)}</p><small style="color:var(--gTxt);font-size:11px;display:block;margin-top:2px">${esc(i.setor||'')}${i.data?' · '+i.data.split('-').reverse().join('/'):''}</small></div></div>`).join(''):'<div class="empty">Nenhuma manifestação no período.</div>';
 }
 /* ── Qualidade de dados: detecção de registros inconsistentes ── */
@@ -1084,7 +1086,8 @@ function renderReport(){
   const sG=sum(rr),sm=ST.saidas.filter(s=>s.mes===mes);
   const tS=sm.reduce((t,x)=>t+x.saidas,0);
   const warnSaidas=!tS?`<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#92400e" class="no-print"><svg style="display:inline;vertical-align:-2px;margin-right:6px" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Saídas de ${esc(ml(mes))} não cadastradas. A % de aplicação não pode ser calculada. <a href="#" onclick="showTab('saidas');return false" style="color:#92400e;font-weight:600">Cadastrar saídas →</a></div>`:'';
-  let h=warnSaidas+`<h2>Pesquisa de Satisfação — ${esc(ml(mes))}</h2>
+  const warnFiltros=af?`<div class="no-print" style="background:#eff6ff;border:1px solid #3b82f6;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#1e40af"><svg style="display:inline;vertical-align:-2px;margin-right:6px" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Relatório filtrado — ${af} filtro${af>1?'s':''} ativo${af>1?'s':''} aplicado${af>1?'s':''}. Os dados representam apenas o subconjunto filtrado, não o total do mês. <a href="#" onclick="showTab('registros');return false" style="color:#1e40af;font-weight:600">Ver/limpar filtros →</a></div>`:'';
+  let h=warnSaidas+warnFiltros+`<h2>Pesquisa de Satisfação — ${esc(ml(mes))}</h2>
   <p>A pesquisa de satisfação tem por objetivo avaliar a satisfação dos usuários atendidos no Hospital Universitário do Ceará – HUC, priorizando a percepção do cuidado centrado no paciente e as oportunidades de melhorias na prestação dos serviços ofertados. A meta de aplicação é de 60%, considerando as saídas hospitalares (altas, transferências externas e óbitos). O indicador de satisfação tem meta de 90%.</p>
   <p>Dados quantitativos por setor:</p>
   <table><thead><tr><th>SETOR</th><th>SAÍDAS</th><th>PESQUISAS APLIC.</th><th>% APLICAÇÃO</th><th>SATISFAÇÃO</th><th>NPS</th></tr></thead><tbody>`;
