@@ -190,6 +190,27 @@ function saveRecord(payload) {
   return { ok: true, rowNumber, record: saved, message: isEdit ? 'Registro atualizado.' : 'Registro salvo.' };
 }
 
+// Importação em lote (CSV digitalizado): reaproveita saveRecord para cada linha
+function importRecords(payloads) {
+  if (!Array.isArray(payloads) || !payloads.length) throw new Error('Nada para importar.');
+  if (payloads.length > 500) throw new Error('Máximo de 500 pesquisas por importação.');
+  let saved = 0;
+  const errors = [];
+  payloads.forEach((p, i) => {
+    try {
+      p.rowNumber = '';
+      saveRecord(p);
+      saved++;
+    } catch (e) {
+      errors.push('Registro ' + (i + 1) + ': ' + (e && e.message ? e.message : e));
+    }
+  });
+  return {
+    ok: true, saved, errors,
+    message: saved + ' pesquisa(s) importada(s)' + (errors.length ? ' · ' + errors.length + ' com erro' : '') + '.'
+  };
+}
+
 function deleteRecord(rowNumber) {
   rowNumber = Number(rowNumber);
   if (!rowNumber || rowNumber < FIRST_DATA_ROW) throw new Error('Linha inválida.');
