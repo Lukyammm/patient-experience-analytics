@@ -1455,9 +1455,13 @@ function svgHorizontalBarChart(title,groups){
 function buildForm(){
   $('rateBlocks').innerHTML=BLOCKS.map(([titulo,,crit,obs],bi)=>`
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <h4 class="text-xs font-semibold uppercase tracking-widest text-mut">${titulo}</h4>
-        <button type="button" class="btn-g" onclick="markAllOtimo(${bi})">Tudo Ótimo</button>
+      <h4 class="text-xs font-semibold uppercase tracking-widest text-mut" style="margin-bottom:12px">${titulo}</h4>
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+        <button type="button" class="btn-g" onclick="markAllRating(${bi},'ÓTIMO')" style="font-weight:500">Ótimo</button>
+        <button type="button" class="btn-g" onclick="markAllRating(${bi},'BOM')" style="font-weight:500">Bom</button>
+        <button type="button" class="btn-g" onclick="markAllRating(${bi},'REGULAR')" style="font-weight:500">Regular</button>
+        <button type="button" class="btn-g" onclick="markAllRating(${bi},'RUIM')" style="font-weight:500">Ruim</button>
+        <button type="button" class="btn-g" onclick="markAllRating(${bi},'N/A')" style="font-weight:500">N/A</button>
       </div>
       ${crit.map(([f,l])=>`<div class="crit"><span class="crit-lbl">${l}</span><div class="seg">${RATINGS.map((r,i)=>`<input type="radio" name="${f}" id="${f}_${i}" value="${r}" ${i===0?'checked':''}><label for="${f}_${i}">${r==='ÓTIMO'?'Ótimo':r==='BOM'?'Bom':r==='REGULAR'?'Regular':r==='RUIM'?'Ruim':'N/A'}</label>`).join('')}</div></div>`).join('')}
       <div style="margin-top:14px"><label class="fl">Observações</label><textarea id="${obs}" class="fta"></textarea></div>
@@ -1571,8 +1575,9 @@ function syncNps(v){
   $('nps').value=v??'';
   document.querySelectorAll('input[name="npsScale"]').forEach(r=>r.checked=String(r.value)===String(v??'__'));
 }
-function markAllOtimo(bi){
-  BLOCKS[bi][2].forEach(([f])=>{const el=document.querySelector(`input[name="${f}"][value="ÓTIMO"]`);if(el)el.checked=true});
+function markAllRating(bi,rating){
+  BLOCKS[bi][2].forEach(([f])=>{const el=document.querySelector(`input[name="${f}"][value="${rating}"]`);if(el)el.checked=true});
+  updateFormProgress();
 }
 function getForm(){
   const ids=['setor','pront','data','tipo','dn','sexo','nps','obsAcolhimento','obsAssistencia','obsServicos','sugestoes','reclamacoes','comentarios','elogios','entrevistador','encaminhamentos'];
