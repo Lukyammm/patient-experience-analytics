@@ -313,7 +313,7 @@
       <nav class="hdr-nav flex gap-0.5 mx-auto overflow-x-auto">
         <button class="nav-b active" data-tab="overview">Visão geral</button>
         <button class="nav-b" data-tab="novo">Nova pesquisa</button>
-        <button class="nav-b" data-tab="registros">Registros</button>
+        <button class="nav-b" data-tab="registros">Registros<span id="incBadge" class="badge" style="display:none;background:#f59e0b;color:#fff" title="Registros com dados inconsistentes"></span></button>
         <button class="nav-b" data-tab="saidas">Saídas</button>
         <button class="nav-b" data-tab="cadastros">Cadastros</button>
         <button class="nav-b" data-tab="relatorio">Relatório</button>
@@ -503,7 +503,7 @@
         <div class="card mb-3">
           <h4 class="text-xs font-semibold uppercase tracking-widest text-mut mb-4">Identificação</h4>
           <div class="grid g-form gap-3" style="grid-template-columns:repeat(3,1fr)">
-            <div><label class="fl">Setor</label><input id="setor" required list="setoresList" class="fi" placeholder="Clínica…"></div>
+            <div><label class="fl">Setor</label><div style="display:flex;gap:6px"><input id="setor" required list="setoresList" class="fi" placeholder="Clínica…" style="min-width:0"><button type="button" class="btn shrink-0" style="padding:0 11px" title="Cadastrar novo setor" onclick="inlineAddCad('SETOR')">+</button></div></div>
             <div><label class="fl">Prontuário</label><input id="pront" class="fi"></div>
             <div><label class="fl">Tipo</label><input id="tipo" list="tiposList" class="fi" placeholder="PAC, ACOMP…"></div>
             <div><label class="fl">Data da pesquisa</label><input id="data" type="date" class="fi"></div>
@@ -548,7 +548,7 @@
               </div>
               <p class="text-[11px] text-mut mt-1.5 leading-relaxed">O indicador NPS é calculado automaticamente a partir dessas notas.</p>
             </div>
-            <div><label class="fl">Entrevistador</label><input id="entrevistador" list="entList" class="fi" placeholder="Assistente social"></div>
+            <div><label class="fl">Entrevistador</label><div style="display:flex;gap:6px"><input id="entrevistador" list="entList" class="fi" placeholder="Assistente social" style="min-width:0"><button type="button" class="btn shrink-0" style="padding:0 11px" title="Cadastrar nova assistente social" onclick="inlineAddCad('ENTREVISTADOR')">+</button></div></div>
             <div><label class="fl">Encaminhamentos</label><input id="encaminhamentos" class="fi"></div>
           </div>
         </div>
@@ -559,7 +559,13 @@
     <section id="registros" class="section">
       <div class="ph">
         <div><h2 class="pt">Registros</h2><p class="text-xs text-mut mt-0.5" id="regSub">Pesquisas salvas na MATRIZ</p></div>
-        <input id="q" class="ctl" placeholder="Buscar…" oninput="renderTable()" style="min-width:200px">
+        <div class="flex gap-2 items-center">
+          <button id="incFilterBtn" class="advBtn" style="display:none;color:#b45309;border-color:#f59e0b" onclick="toggleIncFilter()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span id="incFilterLabel">Inconsistências</span>
+          </button>
+          <input id="q" class="ctl" placeholder="Buscar…" oninput="renderTable()" style="min-width:200px">
+        </div>
       </div>
       <div class="card p-0 overflow-auto">
         <table class="tbl" style="min-width:960px">
@@ -655,6 +661,19 @@
        style="transform:translate(-50%,8px);transition:opacity .2s,transform .2s;box-shadow:0 4px 16px rgba(0,0,0,.12);display:flex;align-items:center;gap:10px">
     <span id="toastMsg"></span>
     <button onclick="closeToast()" style="margin-left:2px;background:none;border:none;cursor:pointer;color:var(--gTxt);font-size:16px;line-height:1;padding:0 2px" title="Fechar">×</button>
+  </div>
+
+  <!-- Mini-modal: cadastro inline de setor/entrevistador -->
+  <div id="inlineModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center" onclick="if(event.target===this)closeInlineModal()">
+    <div style="background:var(--s1);border:1px solid var(--s4);border-radius:14px;padding:22px;width:min(380px,90vw);box-shadow:0 12px 40px rgba(0,0,0,.25)">
+      <h4 id="inlineModalTitle" class="text-sm font-semibold mb-1" style="color:var(--ink)">Novo setor</h4>
+      <p class="text-xs text-mut mb-3">Será adicionado aos cadastros e ficará disponível na lista.</p>
+      <input id="inlineModalInput" class="fi mb-3" placeholder="Nome…" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmInlineAdd()}else if(event.key==='Escape')closeInlineModal()">
+      <div class="flex gap-2 justify-end">
+        <button type="button" class="btn" onclick="closeInlineModal()">Cancelar</button>
+        <button type="button" class="btn-p" onclick="confirmInlineAdd()">Adicionar</button>
+      </div>
+    </div>
   </div>
 
 <script>
@@ -852,7 +871,7 @@ function renderAll(){
   $('pTotal').textContent=s.mn+' manifest.';
   $('dTotal').innerHTML=pv&&mes?dt(s.total-pv.total,' vs '+mc(pm(mes)),0):'';
   $('tTotal').style.width=Math.min(100,s.total/Math.max(1,...allM().map(m=>adv(rows(m,set)).length))*100)+'%';
-  rHist(set);rDist(s);rDonut(s);rSetores(set);rManif(rr);renderTable();rSaidas();renderReport();
+  rHist(set);rDist(s);rDonut(s);rSetores(set);rManif(rr);renderTable();rSaidas();renderReport();updateIncUI();
 }
 function kpi(k,v,meta,pv,foot){
   const pl=$('p'+k),el=$('k'+k),tr=$('t'+k),dl=$('d'+k);
@@ -933,13 +952,40 @@ function rManif(rr){
   const items=[];cats.forEach(([cls,lbl,f])=>rr.forEach(r=>{const t=String(r[f]||'').trim();if(t)items.push({cls,lbl,t,setor:r.setor,data:r.data})}));
   $('manifList').innerHTML=items.length?items.map(i=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:11px 14px;border:1px solid var(--s4);border-radius:10px"><span class="tag ${i.cls}" style="margin-top:2px;flex-shrink:0">${i.lbl}</span><div style="min-width:0"><p style="margin:0;font-size:13px;color:var(--ink);line-height:1.5">${esc(i.t)}</p><small style="color:var(--gTxt);font-size:11px;display:block;margin-top:2px">${esc(i.setor||'')}${i.data?' · '+i.data.split('-').reverse().join('/'):''}</small></div></div>`).join(''):'<div class="empty">Nenhuma manifestação no período.</div>';
 }
+/* ── Qualidade de dados: detecção de registros inconsistentes ── */
+let INC_ONLY=false;
+function incIssues(r){
+  const issues=[];
+  const sx=String(r.sexo||'').trim();
+  if(sx&&!['M','F','Outro','OUTRO'].includes(sx))issues.push('sexo "'+sx+'" fora do padrão (M/F/Outro)');
+  if(!String(r.data||'').trim())issues.push('sem data');
+  else if(!/^\d{4}-\d{2}-\d{2}$/.test(r.data))issues.push('data inválida');
+  if(r.nps!==''&&r.nps!=null){const x=+r.nps;if(isNaN(x)||x<0||x>10)issues.push('NPS "'+r.nps+'" inválido (0–10)');}
+  return issues;
+}
+function updateIncUI(){
+  const inc=ST.records.filter(r=>incIssues(r).length);
+  const badge=$('incBadge'),btn=$('incFilterBtn');
+  if(badge){badge.style.display=inc.length?'':'none';badge.textContent=inc.length;}
+  if(btn){
+    btn.style.display=inc.length?'':'none';
+    $('incFilterLabel').textContent=(INC_ONLY?'Mostrando ':'')+inc.length+' inconsistente'+(inc.length>1?'s':'');
+    btn.style.background=INC_ONLY?'#fef3c7':'';
+  }
+  if(!inc.length)INC_ONLY=false;
+}
+function toggleIncFilter(){INC_ONLY=!INC_ONLY;renderTable();updateIncUI()}
 function renderTable(){
   const q=($('q')?.value||'').toLowerCase();
-  const rr=adv(scopedRows($('gSetor').value)).filter(r=>!q||JSON.stringify(r).toLowerCase().includes(q)).slice(-300).reverse();
+  let base=adv(scopedRows($('gSetor').value));
+  if(INC_ONLY)base=ST.records.filter(r=>incIssues(r).length); // ignora período: mostra todas as inconsistências
+  const rr=base.filter(r=>!q||JSON.stringify(r).toLowerCase().includes(q)).slice(-300).reverse();
   $('regSub').textContent=rr.length+' registro'+(rr.length===1?'':'s')+' no filtro atual';
   $('tbody').innerHTML=rr.length?rr.map(r=>{
     const x=+r.nps,cls=isNaN(x)?'d-mt':x>=9?'d-ok':x>=7?'d-w':'d-bd';
-    return`<tr${r._saving?' style="opacity:.55"':''}><td>${r.data?r.data.split('-').reverse().join('/'):''}</td><td>${esc(r.setor)}</td><td>${esc(r.pront)}</td><td>${esc(r.tipo)}</td><td>${esc(r.sexo)}</td><td>${Number(r.taxaSatisfacao||0).toFixed(1).replace('.',',')}%</td><td><span class="dot ${cls}"></span>${r.nps??''}</td><td style="color:var(--sub)">${esc(r.entrevistador||'')}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--sub)">${esc([r.reclamacoes,r.sugestoes,r.elogios,r.comentarios].filter(Boolean)[0]||'')}</td><td><div style="display:flex;gap:4px"><button class="btn" style="padding:3px 9px;font-size:12px" onclick='editRecord(${JSON.stringify(r.rowNumber)})'>Editar</button><button class="btn" style="padding:3px 9px;font-size:12px;color:#ef4444;border-color:#ef4444" onclick='rmRecord(${JSON.stringify(r.rowNumber)})'>Excluir</button></div></td></tr>`;
+    const iss=incIssues(r);
+    const trStyle=[r._saving?'opacity:.55':'',iss.length?'box-shadow:inset 3px 0 0 #f59e0b':''].filter(Boolean).join(';');
+    return`<tr${trStyle?` style="${trStyle}"`:''}${iss.length?` title="Inconsistências: ${esc(iss.join('; '))}"`:''}><td>${r.data?r.data.split('-').reverse().join('/'):''}</td><td>${esc(r.setor)}</td><td>${esc(r.pront)}</td><td>${esc(r.tipo)}</td><td>${esc(r.sexo)}</td><td>${Number(r.taxaSatisfacao||0).toFixed(1).replace('.',',')}%</td><td><span class="dot ${cls}"></span>${r.nps??''}</td><td style="color:var(--sub)">${esc(r.entrevistador||'')}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--sub)">${esc([r.reclamacoes,r.sugestoes,r.elogios,r.comentarios].filter(Boolean)[0]||'')}</td><td><div style="display:flex;gap:4px"><button class="btn" style="padding:3px 9px;font-size:12px" onclick='editRecord(${JSON.stringify(r.rowNumber)})'>Editar</button><button class="btn" style="padding:3px 9px;font-size:12px;color:#ef4444;border-color:#ef4444" onclick='rmRecord(${JSON.stringify(r.rowNumber)})'>Excluir</button></div></td></tr>`;
   }).join(''):(q||advCount()?'<tr><td colspan="10" class="empty">Sem registros para os filtros atuais.</td></tr>':'<tr><td colspan="10" class="empty">Nenhuma pesquisa registrada ainda. <a href="#" onclick="showTab(\'novo\');return false" style="color:var(--blue)">Criar nova pesquisa →</a></td></tr>');
 }
 function rSaidas(){
@@ -987,6 +1033,39 @@ function saveCad(e,tipo){
   const nome=inp.value.trim();if(!nome)return;
   load(true);
   google.script.run.withSuccessHandler(res=>{load(false);toast(res.message);inp.value='';reload()}).withFailureHandler(err=>{load(false);toast(err.message||err)}).saveCadastro({tipo,nome});
+}
+/* ── Cadastro inline (botão + no form de pesquisa) ── */
+let INLINE_TIPO='';
+function inlineAddCad(tipo){
+  INLINE_TIPO=tipo;
+  const inp=tipo==='SETOR'?$('setor'):$('entrevistador');
+  $('inlineModalTitle').textContent=tipo==='SETOR'?'Novo setor':'Nova assistente social';
+  $('inlineModalInput').value=(inp.value||'').trim();
+  $('inlineModal').style.display='flex';
+  setTimeout(()=>$('inlineModalInput').focus(),50);
+}
+function closeInlineModal(){$('inlineModal').style.display='none'}
+function confirmInlineAdd(){
+  const nome=$('inlineModalInput').value.trim().toUpperCase();
+  if(!nome)return toast('Informe o nome.');
+  const tipo=INLINE_TIPO;
+  closeInlineModal();
+  // Atualização otimista: entra no datalist na hora
+  ST.cadastros.push({tipo,nome,rowNumber:'tmp_c'+Date.now()});
+  const lk=tipo==='SETOR'?'setores':'entrevistadores';
+  if(!(ST.lookups[lk]||[]).includes(nome))ST.lookups[lk]=(ST.lookups[lk]||[]).concat([nome]);
+  hydrate();
+  const inp=tipo==='SETOR'?$('setor'):$('entrevistador');
+  inp.value=nome;
+  toast((tipo==='SETOR'?'Setor':'Assistente social')+' adicionado(a).');
+  google.script.run
+    .withSuccessHandler(()=>{})
+    .withFailureHandler(err=>{
+      // Reverte se o servidor recusar (ex.: duplicado)
+      ST.cadastros=ST.cadastros.filter(c=>!(c.tipo===tipo&&c.nome===nome&&String(c.rowNumber).startsWith('tmp_c')));
+      toast(err.message||err);
+    })
+    .saveCadastro({tipo,nome});
 }
 function rmCad(rn){
   if(!confirm('Remover este cadastro? (não apaga pesquisas já registradas)'))return;
