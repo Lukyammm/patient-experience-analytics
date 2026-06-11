@@ -403,9 +403,17 @@ function backfillSatisfacaoBlocks() {
 function ocrPdfViaVisionApi(base64Content) {
   const props = PropertiesService.getUserProperties();
   const keyJson = props.getProperty('GOOGLE_CLOUD_KEY');
+  Logger.log('DEBUG: keyJson exists: ' + !!keyJson);
+  Logger.log('DEBUG: keyJson length: ' + (keyJson ? keyJson.length : 0));
   if (!keyJson) throw new Error('Chave Google Cloud não configurada.');
 
-  const key = JSON.parse(keyJson);
+  let key;
+  try {
+    key = JSON.parse(keyJson);
+  } catch (e) {
+    Logger.log('DEBUG: JSON parse error: ' + e);
+    throw new Error('Erro ao processar chave: ' + e.message);
+  }
   const accessToken = getGoogleAccessToken_(key);
 
   const payload = {
