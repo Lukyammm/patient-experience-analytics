@@ -452,12 +452,12 @@ function getGoogleAccessToken_(serviceAccountKey) {
     iat: now
   };
 
-  const headerEncoded = Utilities.base64Encode(JSON.stringify(header), true).replace(/=/g, '');
-  const claimEncoded = Utilities.base64Encode(JSON.stringify(claim), true).replace(/=/g, '');
+  const headerEncoded = Utilities.base64Encode(JSON.stringify(header)).replace(/=/g, '');
+  const claimEncoded = Utilities.base64Encode(JSON.stringify(claim)).replace(/=/g, '');
   const signatureInput = headerEncoded + '.' + claimEncoded;
 
   const signature = Utilities.computeRsaSha256Signature(signatureInput, serviceAccountKey.private_key);
-  const signatureEncoded = Utilities.base64Encode(signature, true).replace(/=/g, '');
+  const signatureEncoded = Utilities.base64Encode(signature).replace(/=/g, '');
 
   const jwt = signatureInput + '.' + signatureEncoded;
 
