@@ -92,6 +92,9 @@
     svg text{font-family:Inter,sans-serif}
     .card{box-shadow:var(--card-shadow);transition:box-shadow .2s ease}
 
+    /* ── Tooltip para gráficos ── */
+    @keyframes fadeIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+
     /* ── Validação em tempo real ── */
     .field-error{border-color:#ef4444!important;background:rgba(239,68,68,.03)!important}
     .field-error:focus{ring:2px solid rgba(239,68,68,.3)!important;border-color:#ef4444!important}
@@ -706,6 +709,11 @@
     <button onclick="closeToast()" style="margin-left:2px;background:none;border:none;cursor:pointer;color:var(--gTxt);font-size:16px;line-height:1;padding:0 2px" title="Fechar">×</button>
   </div>
 
+  <!-- Tooltip para gráficos -->
+  <div id="tooltip" style="display:none;position:fixed;background:var(--s2);border:1px solid var(--s4);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--ink);box-shadow:0 4px 12px rgba(0,0,0,.15);pointer-events:none;z-index:50;white-space:nowrap;animation:fadeIn .15s ease">
+    <span id="tooltipText"></span>
+  </div>
+
   <!-- Bottom Navigation (Mobile only) -->
   <nav id="bottomNav">
     <a href="#" class="bottom-nav-item active" data-tab="overview" onclick="showTabMobile('overview');return false">
@@ -766,6 +774,10 @@ let _toastTimer=null,_toastQ=[];
 function toast(msg){if($('toast').style.opacity==='1'){_toastQ.push(msg);return;}_showToast(msg);}
 function _showToast(msg){const t=$('toast');$('toastMsg').textContent=msg;t.style.opacity='1';t.style.transform='translate(-50%,0)';clearTimeout(_toastTimer);_toastTimer=setTimeout(closeToast,3000);}
 function closeToast(){const t=$('toast');t.style.opacity='0';t.style.transform='translate(-50%,8px)';if(_toastQ.length)setTimeout(()=>{if(_toastQ.length)_showToast(_toastQ.shift())},350);}
+
+/* ── Tooltip para gráficos ── */
+function showTooltip(text,x,y){const tt=$('tooltip');$('tooltipText').textContent=text;tt.style.display='block';tt.style.left=(x+10)+'px';tt.style.top=(y-10)+'px';}
+function hideTooltip(){$('tooltip').style.display='none';}
 function load(v){$('topbar').classList.toggle('on',v)}
 function showTab(tab){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));$(tab).classList.add('active');document.querySelectorAll('.nav-b').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab))}
 function showTabMobile(tab){showTab(tab);document.querySelectorAll('.bottom-nav-item').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab))}
@@ -967,14 +979,14 @@ function rHist(set){
   [0,25,50,75,100].forEach(v=>{g+=`<line x1="${P.l}" y1="${Y(v)}" x2="${W-P.r}" y2="${Y(v)}" style="stroke:var(--grid)" stroke-width="1"/><text x="${P.l-6}" y="${Y(v)+4}" font-size="9.5" style="fill:var(--gTxt)" text-anchor="end">${v}</text>`});
   g+=`<line x1="${P.l}" y1="${Y(90)}" x2="${W-P.r}" y2="${Y(90)}" style="stroke:var(--gTxt)" stroke-dasharray="3 4" stroke-width="1"/>`;
   m.forEach((x,i)=>{g+=`<text x="${X(i)}" y="${H-4}" font-size="9.5" style="fill:var(--gTxt)" text-anchor="middle">${mc(x)}</text>`});
-  const mk=(vals,color)=>{
+  const mk=(vals,color,label)=>{
     const pts=vals.map((v,i)=>v==null?null:[X(i),Y(v)]);
     let path='',st=false;pts.forEach(p=>{if(!p){st=false;return}path+=(st?'L':'M')+p[0]+' '+p[1]+' ';st=true});
-    const dots=pts.map((p,i)=>p?`<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="${color}"><title>${ml(m[i])}: ${fmt(vals[i],1)}</title></circle>`:'').join('');
+    const dots=pts.map((p,i)=>p?`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${color}" style="cursor:pointer;opacity:.8;transition:opacity .15s" onmouseover="showTooltip('${label}: ${fmt(vals[i],1)}%',event.pageX,event.pageY)" onmouseout="hideTooltip()" onclick=""><title>${ml(m[i])}: ${fmt(vals[i],1)}</title></circle>`:'').join('');
     const last=[...pts].reverse().find(Boolean),lv=[...vals].reverse().find(v=>v!=null);
     return{svg:`<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`+dots,last,lv,color};
   };
-  const A=mk(sa,'#3b82f6'),B=mk(np,'#a78bfa');
+  const A=mk(sa,'#3b82f6','Satisfação'),B=mk(np,'#a78bfa','NPS');
   // Posiciona os rótulos finais evitando colisão (afasta verticalmente se necessário)
   const place=[A,B].filter(L=>L.last).map(L=>({x:L.last[0],y:L.last[1],v:L.lv,c:L.color}));
   if(place.length===2&&Math.abs(place[0].y-place[1].y)<14){
@@ -995,18 +1007,18 @@ function rDist(s){
   $('distSub').textContent=tot?tot+' respostas nos 16 critérios':'distribuição nos 16 critérios';
   if(!tot){$('distStack').innerHTML='';$('distRows').innerHTML='<div class="empty">Sem avaliações.</div>';return}
   const items=[['Ótimo',s.ot,'c-o'],['Bom',s.bo,'c-b'],['Regular',s.re,'c-r'],['Ruim',s.ru,'c-ru'],['N/A',s.na,'c-n']];
-  $('distStack').innerHTML=items.map(([,v,c])=>`<span class="${c}" style="width:${v/tot*100}%"></span>`).join('');
+  $('distStack').innerHTML=items.map(([k,v,c])=>`<span class="${c}" style="width:${v/tot*100}%;cursor:pointer" onmouseover="showTooltip('${k}: ${v} (${(v/tot*100).toFixed(1).replace('.',',')}%)',event.pageX,event.pageY)" onmouseout="hideTooltip()"></span>`).join('');
   const mx=Math.max(...items.map(i=>i[1]),1);
-  $('distRows').innerHTML=items.map(([k,v,c])=>`<div class="drow"><span style="color:var(--sub)">${k}</span><div class="dbar"><span class="${c}" style="width:${v/mx*100}%"></span></div><b style="color:var(--ink)">${v}</b><span style="color:var(--gTxt);font-size:11px;text-align:right">${(v/tot*100).toFixed(1).replace('.',',')}%</span></div>`).join('');
+  $('distRows').innerHTML=items.map(([k,v,c])=>`<div class="drow"><span style="color:var(--sub)">${k}</span><div class="dbar"><span class="${c}" style="width:${v/mx*100}%;cursor:pointer" onmouseover="showTooltip('${k}: ${v} respostas (${(v/tot*100).toFixed(1).replace('.',',')}%)',event.pageX,event.pageY)" onmouseout="hideTooltip()"></span></div><b style="color:var(--ink)">${v}</b><span style="color:var(--gTxt);font-size:11px;text-align:right">${(v/tot*100).toFixed(1).replace('.',',')}%</span></div>`).join('');
 }
 function rDonut(s){
   const tot=s.p+s.n+s.d;
   if(!tot){$('npsDonut').innerHTML='<div class="empty">Sem NPS.</div>';$('npsLegend').innerHTML='';return}
-  const R=52,C=2*Math.PI*R;const segs=[[s.p,'#22c55e'],[s.n,'#f59e0b'],[s.d,'#ef4444']];
+  const R=52,C=2*Math.PI*R;const segs=[['Promotores',s.p,'#22c55e'],['Neutros',s.n,'#f59e0b'],['Detratores',s.d,'#ef4444']];
   let off=0,arcs='';
-  segs.forEach(([v,c])=>{const l=v/tot*C;if(v)arcs+=`<circle r="${R}" cx="64" cy="64" fill="none" stroke="${c}" stroke-width="11" stroke-dasharray="${l} ${C-l}" stroke-dashoffset="${-off}" transform="rotate(-90 64 64)"/>`;off+=l});
+  segs.forEach(([lbl,v,c])=>{const l=v/tot*C;if(v)arcs+=`<circle r="${R}" cx="64" cy="64" fill="none" stroke="${c}" stroke-width="11" stroke-dasharray="${l} ${C-l}" stroke-dashoffset="${-off}" transform="rotate(-90 64 64)" style="cursor:pointer" onmouseover="showTooltip('${lbl}: ${v} (${(v/tot*100).toFixed(0)}%)',event.pageX,event.pageY)" onmouseout="hideTooltip()"/>`;off+=l});
   $('npsDonut').innerHTML=`<svg viewBox="0 0 128 128" style="width:140px"><circle r="${R}" cx="64" cy="64" fill="none" style="stroke:var(--grid)" stroke-width="11"/>${arcs}<text x="64" y="60" text-anchor="middle" font-size="20" font-weight="700" style="fill:var(--ink)">${fmt(s.nps)}</text><text x="64" y="76" text-anchor="middle" font-size="9" style="fill:var(--mut)">NPS</text></svg>`;
-  $('npsLegend').innerHTML=[['Promotores',s.p,'#22c55e'],['Neutros',s.n,'#f59e0b'],['Detratores',s.d,'#ef4444']].map(([l,v,c])=>`<div style="display:flex;justify-content:space-between;font-size:12px"><span><span style="display:inline-block;width:7px;height:7px;border-radius:99px;background:${c};margin-right:7px;vertical-align:1px"></span><span style="color:var(--sub)">${l}</span></span><b style="color:var(--ink)">${v}</b></div>`).join('');
+  $('npsLegend').innerHTML=segs.map(([l,v,c])=>`<div style="display:flex;justify-content:space-between;font-size:12px;cursor:pointer" onmouseover="showTooltip('${l}: ${v} (${(v/tot*100).toFixed(0)}%)',event.pageX,event.pageY)" onmouseout="hideTooltip()"><span><span style="display:inline-block;width:7px;height:7px;border-radius:99px;background:${c};margin-right:7px;vertical-align:1px"></span><span style="color:var(--sub)">${l}</span></span><b style="color:var(--ink)">${v}</b></div>`).join('');
 }
 function rSetores(){
   const map={};adv(scopedRows('')).forEach(r=>{const k=r.setor||'Sem setor';(map[k]=map[k]||[]).push(r)});
