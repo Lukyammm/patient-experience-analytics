@@ -354,6 +354,7 @@
         <button class="nav-b" data-tab="registros">Registros<span id="incBadge" class="badge" style="display:none;background:#f59e0b;color:#fff" title="Registros com dados inconsistentes"></span></button>
         <button class="nav-b" data-tab="saidas">Saídas</button>
         <button class="nav-b" data-tab="cadastros">Cadastros</button>
+        <button class="nav-b" data-tab="manifestacoes">Manifestações</button>
         <button class="nav-b" data-tab="relatorio">Relatório</button>
       </nav>
 
@@ -383,6 +384,7 @@
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           <span id="advClearLabel">Limpar filtros</span>
         </button>
+        <div id="savedFiltersContainer" style="display:inline-flex;gap:4px;align-items:center"></div>
         <button onclick="reload()" class="advBtn px-2.5" title="Atualizar dados">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         </button>
@@ -412,6 +414,7 @@
           <option value="elogios">Com elogio</option>
           <option value="comentarios">Com comentário</option>
         </select>
+        <button onclick="saveCurrentFilter(prompt('Nome do filtro:'))" class="advBtn">💾 Salvar filtro</button>
         <button onclick="clearAdv()" class="advBtn">Limpar filtros</button>
       </div>
     </div>
@@ -603,12 +606,14 @@
     <section id="registros" class="section">
       <div class="ph">
         <div><h2 class="pt">Registros</h2><p class="text-xs text-mut mt-0.5" id="regSub">Pesquisas salvas na MATRIZ</p></div>
-        <div class="flex gap-2 items-center">
+        <div class="flex gap-2 items-center" style="position:relative">
           <button id="incFilterBtn" class="advBtn" style="display:none;color:#b45309;border-color:#f59e0b" onclick="toggleIncFilter()">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             <span id="incFilterLabel">Inconsistências</span>
           </button>
-          <input id="q" class="ctl" placeholder="Buscar…" oninput="renderTable()" style="min-width:200px">
+          <input id="q" class="ctl" placeholder="Buscar (ex: setor:ortopedia, 10/06)…" oninput="renderTable();updateSearchSuggestions()" style="min-width:200px">
+          <div id="searchSuggestions" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--s2);border:1px solid var(--s4);border-top:none;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:10">
+          </div>
         </div>
       </div>
       <div class="card p-0 overflow-auto">
@@ -685,6 +690,33 @@
       </div>
     </section>
 
+    <!-- ══ MANIFESTAÇÕES ════════════════════════════════ -->
+    <section id="manifestacoes" class="section">
+      <div class="ph">
+        <div>
+          <h2 class="pt">Manifestações</h2>
+          <p class="text-xs text-mut mt-0.5" id="manifSub">Reclamações, sugestões, elogios e comentários</p>
+        </div>
+        <div class="flex gap-2">
+          <select id="fManifType" onchange="renderManifestacoes()" class="ctls">
+            <option value="">Tipo: todos</option>
+            <option value="reclamacoes">Reclamações</option>
+            <option value="sugestoes">Sugestões</option>
+            <option value="elogios">Elogios</option>
+            <option value="comentarios">Comentários</option>
+          </select>
+          <select id="fManifStatus" onchange="renderManifestacoes()" class="ctls">
+            <option value="">Status: todos</option>
+            <option value="aberto">Aberto</option>
+            <option value="resolvido">Resolvido</option>
+          </select>
+        </div>
+      </div>
+      <div class="card p-0 overflow-auto">
+        <div id="manifTable"></div>
+      </div>
+    </section>
+
     <!-- ══ RELATÓRIO ═════════════════════════════════ -->
     <section id="relatorio" class="section">
       <div class="ph no-print">
@@ -732,9 +764,9 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7v12m8-12v12M4 13h16"/></svg>
       <span>Saídas</span>
     </a>
-    <a href="#" class="bottom-nav-item" data-tab="cadastros" onclick="showTabMobile('cadastros');return false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <span>Cadastros</span>
+    <a href="#" class="bottom-nav-item" data-tab="manifestacoes" onclick="showTabMobile('manifestacoes');return false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Manifest.</span>
     </a>
     <a href="#" class="bottom-nav-item" data-tab="relatorio" onclick="showTabMobile('relatorio');return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="13" x2="16" y2="13"/><line x1="12" y1="17" x2="16" y2="17"/></svg>
@@ -778,6 +810,124 @@ function closeToast(){const t=$('toast');t.style.opacity='0';t.style.transform='
 /* ── Tooltip para gráficos ── */
 function showTooltip(text,x,y){const tt=$('tooltip');$('tooltipText').textContent=text;tt.style.display='block';tt.style.left=(x+10)+'px';tt.style.top=(y-10)+'px';}
 function hideTooltip(){$('tooltip').style.display='none';}
+
+/* ── Busca Inteligente ── */
+function updateSearchSuggestions(){
+  const q=($('q')?.value||'').toLowerCase().trim();
+  const suggestions=$('searchSuggestions');
+  if(!q){suggestions.style.display='none';return;}
+
+  const allRecords=adv(scopedRows($('gSetor').value));
+  const fieldMatch=q.includes(':');
+  let matches=[];
+
+  if(fieldMatch){
+    const[field,val]=q.split(':');
+    const fieldName=field.trim().toLowerCase();
+    const searchVal=val.trim().toLowerCase();
+
+    matches=allRecords.filter(r=>{
+      if(fieldName==='setor')return(r.setor||'').toLowerCase().includes(searchVal);
+      if(fieldName==='data')return(r.data||'').includes(searchVal);
+      if(fieldName==='tipo')return(r.tipo||'').toLowerCase().includes(searchVal);
+      if(fieldName==='sexo')return(r.sexo||'').toLowerCase().includes(searchVal);
+      return false;
+    }).slice(0,5);
+  }else{
+    matches=allRecords.filter(r=>JSON.stringify(r).toLowerCase().includes(q)).slice(0,5);
+  }
+
+  if(!matches.length){suggestions.style.display='none';return;}
+  suggestions.innerHTML=matches.map(r=>`<div style="padding:8px 12px;border-bottom:1px solid var(--s4);cursor:pointer;font-size:12px;color:var(--sub)" onclick="setSearchValue('${esc(r.data||'')} ${esc(r.setor||'')}');renderTable()">${esc(r.data||'')} • ${esc(r.setor||'')} • ${esc(r.tipo||'')}</div>`).join('');
+  suggestions.style.display='block';
+}
+
+function setSearchValue(val){$('q').value=val;$('searchSuggestions').style.display='none';renderTable();}
+
+/* ── Filtros Salvos ── */
+function getSavedFilters(){try{return JSON.parse(localStorage.getItem('pesquisa_saved_filters'))||{}}catch(e){return{}}}
+function getSavedFilterName(key){const saved=getSavedFilters();return saved[key]?.name||key;}
+function saveCurrentFilter(name){
+  const filters={tipo:$('fTipo').value,sexo:$('fSexo').value,ent:$('fEnt').value,nps:$('fNps').value,manif:$('fManif').value,mes:$('gMes').value,setor:$('gSetor').value};
+  const saved=getSavedFilters();
+  const key='filter_'+Date.now();
+  saved[key]={name:name||`Filtro ${Object.keys(saved).length+1}`,filters,created:new Date().toISOString()};
+  localStorage.setItem('pesquisa_saved_filters',JSON.stringify(saved));
+  renderSavedFilters();
+  toast('Filtro salvo!');
+}
+
+function loadSavedFilter(key){
+  const saved=getSavedFilters()[key];
+  if(!saved)return;
+  const f=saved.filters;
+  $('fTipo').value=f.tipo||'';
+  $('fSexo').value=f.sexo||'';
+  $('fEnt').value=f.ent||'';
+  $('fNps').value=f.nps||'';
+  $('fManif').value=f.manif||'';
+  $('gMes').value=f.mes||'';
+  $('gSetor').value=f.setor||'';
+  renderAll();
+  toast(`Filtro "${saved.name}" carregado!`);
+}
+
+function deleteSavedFilter(key){
+  const saved=getSavedFilters();
+  const name=saved[key]?.name||'';
+  delete saved[key];
+  localStorage.setItem('pesquisa_saved_filters',JSON.stringify(saved));
+  renderSavedFilters();
+  toast(`Filtro "${name}" removido!`);
+}
+
+function renderSavedFilters(){
+  const saved=getSavedFilters();
+  const container=$('savedFiltersContainer');
+  if(!Object.keys(saved).length){container.innerHTML='';return;}
+  container.innerHTML=Object.entries(saved).map(([k,v])=>`<button class="advBtn" style="padding:5px 8px" title="${v.name}" onclick="loadSavedFilter('${k}')">${v.name.substring(0,15)}${v.name.length>15?'…':''}</button><button class="advBtn" style="padding:4px;color:#f59e0b;border-color:#f59e0b" onclick="deleteSavedFilter('${k}')" title="Deletar filtro"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`).join('');
+}
+
+/* ── Manifestações Resolvidas ── */
+function getManifestationStatus(){try{return JSON.parse(localStorage.getItem('pesquisa_manifestations'))||{}}catch(e){return{}}}
+function toggleManifestationStatus(manifKey){
+  const status=getManifestationStatus();
+  if(!status[manifKey]){status[manifKey]={}}
+  if(status[manifKey].resolvido){delete status[manifKey].resolvido;delete status[manifKey].dataResolucao}else{status[manifKey].resolvido=true;status[manifKey].dataResolucao=new Date().toISOString().split('T')[0]}
+  localStorage.setItem('pesquisa_manifestations',JSON.stringify(status));
+  renderManifestacoes();
+}
+
+function renderManifestacoes(){
+  const typeFilter=$('fManifType')?.value||'';
+  const statusFilter=$('fManifStatus')?.value||'';
+  const status=getManifestationStatus();
+  const cats=[['t-rc','RECLAMAÇÃO','reclamacoes'],['t-sg','SUGESTÃO','sugestoes'],['t-el','ELOGIO','elogios'],['t-cm','COMENTÁRIO','comentarios']];
+  const allManif=[];
+
+  adv(scopedRows($('gSetor').value)).forEach(r=>{
+    cats.forEach(([cls,lbl,f])=>{
+      const t=String(r[f]||'').trim();
+      if(t){
+        const manifKey=`${r.rowNumber}_${f}`;
+        const s=status[manifKey]||{};
+        allManif.push({cls,lbl,text:t,setor:r.setor,data:r.data,resolvido:s.resolvido,dataResolucao:s.dataResolucao,manifKey,field:f});
+      }
+    });
+  });
+
+  allManif.sort((a,b)=>String(b.data||'').localeCompare(String(a.data||'')));
+
+  const filtered=allManif.filter(m=>{
+    if(typeFilter&&m.field!==typeFilter)return false;
+    if(statusFilter==='aberto'&&m.resolvido)return false;
+    if(statusFilter==='resolvido'&&!m.resolvido)return false;
+    return true;
+  });
+
+  $('manifSub').textContent=filtered.length+' manifestação'+(filtered.length===1?'':'ões')+' no período';
+  $('manifTable').innerHTML=filtered.length?filtered.map(m=>`<div style="padding:14px;border-bottom:1px solid var(--s4);${m.resolvido?'opacity:.65':''}"><div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px"><span class="tag ${m.cls}">${m.lbl}</span><span class="pill ${m.resolvido?'p-ok':'p-mt'}" style="margin-top:2px">${m.resolvido?'✓ Resolvido':'Aberto'}</span>${m.resolvido?`<span class="pill p-mt" style="margin-top:2px;font-size:10px">${m.dataResolucao}</span>`:''}</div><p style="margin:0;font-size:13px;color:var(--ink);line-height:1.6;margin-bottom:8px">${esc(m.text)}</p><div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--gTxt)"><span>${esc(m.setor||'Sem setor')} · ${m.data?.split('-').reverse().join('/') || ''}</span><button class="btn" style="padding:4px 10px;font-size:11px" onclick="toggleManifestationStatus('${esc(m.manifKey)}')">${m.resolvido?'Reabrir':'Marcar como resolvida'}</button></div></div>`).join(''):'<div class="empty">Nenhuma manifestação para os filtros selecionados.</div>';
+}
 function load(v){$('topbar').classList.toggle('on',v)}
 function showTab(tab){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));$(tab).classList.add('active');document.querySelectorAll('.nav-b').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab))}
 function showTabMobile(tab){showTab(tab);document.querySelectorAll('.bottom-nav-item').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab))}
@@ -956,7 +1106,7 @@ function renderAll(){
   $('pTotal').textContent=s.mn+' manifest.';
   $('dTotal').innerHTML=pv&&mes?dt(s.total-pv.total,' vs '+mc(pm(mes)),0):'';
   $('tTotal').style.width=Math.min(100,s.total/Math.max(1,...allM().map(m=>adv(rows(m,set)).length))*100)+'%';
-  rHist(set);rDist(s);rDonut(s);rSetores(set);rManif(rr);renderTable();rSaidas();renderReport();updateIncUI();
+  rHist(set);rDist(s);rDonut(s);rSetores(set);rManif(rr);renderTable();rSaidas();renderManifestacoes();renderReport();updateIncUI();renderSavedFilters();
 }
 function kpi(k,v,meta,pv,foot){
   const pl=$('p'+k),el=$('k'+k),tr=$('t'+k),dl=$('d'+k);
