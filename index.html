@@ -186,6 +186,9 @@
 
     /* ── Cadastros (lista de linhas) ── */
     .cad-scroll{max-height:440px;overflow-y:auto;margin:0 -6px;padding:0 6px}
+    .search-wrap{position:relative}
+    .search-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--gTxt);pointer-events:none}
+    .search-inp{padding-left:34px!important}
     .cad-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:11px;transition:background .12s ease}
     .cad-item:hover{background:var(--s3)}
     .cad-item+.cad-item{margin-top:2px}
@@ -594,7 +597,10 @@
             <input id="cadSetor" class="fi" placeholder="Novo setor (ex.: CLÍNICA ORTOPÉDICA)" required>
             <button class="btn-p shrink-0">Adicionar</button>
           </form>
-          <input id="qSetor" class="fi mb-3" placeholder="🔍 Filtrar setores…" oninput="renderCads()">
+          <div class="search-wrap mb-3">
+            <svg class="search-ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="5"/><line x1="13" y1="13" x2="17" y2="17"/></svg>
+            <input id="qSetor" class="fi search-inp" placeholder="Filtrar setores…" oninput="renderCads()">
+          </div>
           <div class="cad-scroll" id="listSetores"></div>
         </div>
         <div class="card">
@@ -606,7 +612,10 @@
             <input id="cadEnt" class="fi" placeholder="Nova assistente social" required>
             <button class="btn-p shrink-0">Adicionar</button>
           </form>
-          <input id="qEnt" class="fi mb-3" placeholder="🔍 Filtrar entrevistadores…" oninput="renderCads()">
+          <div class="search-wrap mb-3">
+            <svg class="search-ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="5"/><line x1="13" y1="13" x2="17" y2="17"/></svg>
+            <input id="qEnt" class="fi search-inp" placeholder="Filtrar entrevistadores…" oninput="renderCads()">
+          </div>
           <div class="cad-scroll" id="listEnts"></div>
         </div>
       </div>
