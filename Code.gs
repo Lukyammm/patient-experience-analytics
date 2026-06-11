@@ -175,6 +175,14 @@ function saveRecord(payload) {
   row[COL.satisfacao2 - 1] = blockSat(BLOCO_ASSISTENCIA);
   row[COL.satisfacao3 - 1] = blockSat(BLOCO_SERVICOS);
 
+  // Calcula idade a partir da data de nascimento e a data da pesquisa
+  const dnD = parseDateOrText_(payload.dn);
+  const dtD = parseDateOrText_(payload.data);
+  if (dnD instanceof Date && dtD instanceof Date) {
+    const age = Math.floor((dtD - dnD) / 31557600000);
+    if (age >= 0 && age <= 120) row[COL.idade - 1] = age;
+  }
+
   sheet.getRange(rowNumber, 1, 1, LAST_COL).setValues([row]);
   sheet.getRangeList([`K${rowNumber}`, `T${rowNumber}`, `AB${rowNumber}`, `AP${rowNumber}`]).setNumberFormat('0.00%');
 
