@@ -187,6 +187,10 @@ function saveRecord(payload) {
   sheet.getRangeList([`K${rowNumber}`, `T${rowNumber}`, `AB${rowNumber}`, `AP${rowNumber}`]).setNumberFormat('0.00%');
 
   const saved = rowToObject_(row.map(v => v === '' ? '' : String(v)), rowNumber);
+  // row contém Date objects para campos de data; String(Date) produz formato ilegível.
+  // Restaura do payload original que já está em YYYY-MM-DD.
+  saved.data = normalizeDate_(p.data);
+  saved.dn   = normalizeDate_(p.dn);
   return { ok: true, rowNumber, record: saved, message: isEdit ? 'Registro atualizado.' : 'Registro salvo.' };
 }
 
