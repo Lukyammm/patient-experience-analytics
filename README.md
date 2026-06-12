@@ -1,4 +1,4 @@
-# PESQUISA_SATISFACAO
+# Patient Satisfaction Survey System
 
 Patient satisfaction survey system designed to collect, organize, and analyze healthcare feedback.
 
