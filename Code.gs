@@ -143,6 +143,9 @@ const BLOCO_ASSISTENCIA = ['gentilezaAssistencia','identificacao','intimidade','
 const BLOCO_SERVICOS = ['acesso','acomodacao','limpeza','enxoval','alimentacao','locomocao'];
 
 function saveRecord(payload) {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) throw new Error('Sistema ocupado, tente novamente em instantes.');
+  try {
   const sheet = getSheet_();
   ensureHeader_(sheet);
   const isEdit = !!Number(payload.rowNumber);
@@ -189,9 +192,12 @@ function saveRecord(payload) {
   const saved = rowToObject_(row.map(v => v === '' ? '' : String(v)), rowNumber);
   // row contém Date objects para campos de data; String(Date) produz formato ilegível.
   // Restaura do payload original que já está em YYYY-MM-DD.
-  saved.data = normalizeDate_(p.data);
-  saved.dn   = normalizeDate_(p.dn);
+  saved.data = normalizeDate_(payload.data);
+  saved.dn   = normalizeDate_(payload.dn);
   return { ok: true, rowNumber, record: saved, message: isEdit ? 'Registro atualizado.' : 'Registro salvo.' };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // Importação em lote (CSV digitalizado): reaproveita saveRecord para cada linha
