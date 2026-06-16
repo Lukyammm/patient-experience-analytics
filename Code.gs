@@ -38,19 +38,23 @@ function getInitialData() {
   const lastRow = Math.max(sheet.getLastRow(), FIRST_DATA_ROW - 1);
   const numRows = Math.max(0, lastRow - FIRST_DATA_ROW + 1);
   const values = numRows ? sheet.getRange(FIRST_DATA_ROW, 1, numRows, LAST_COL).getDisplayValues() : [];
-  const records = values.map((row, i) => rowToObject_(row, FIRST_DATA_ROW + i))
+  const rawRecords = values.map((row, i) => rowToObject_(row, FIRST_DATA_ROW + i))
     .filter(r => hasContent_(r));
+  const rawSaidas = getSaidas();
 
   const cadastros = getCadastros();
   const cadSetores = cadastros.filter(c => c.tipo === 'SETOR').map(c => c.nome);
   const cadEnts = cadastros.filter(c => c.tipo === 'ENTREVISTADOR').map(c => c.nome);
+  const setorMap = buildSectorCanonicalMap_(rawRecords.map(r => r.setor).concat(rawSaidas.map(s => s.setor), cadSetores));
+  const records = rawRecords.map(r => Object.assign({}, r, { setor: canonicalSector_(r.setor, setorMap) }));
+  const saidas = dedupeSaidas_(rawSaidas, setorMap);
 
   return {
     records,
-    saidas: getSaidas(),
+    saidas,
     cadastros,
     lookups: {
-      setores: unique_(records.map(r => r.setor).concat(cadSetores)),
+      setores: uniqueSectors_(records.map(r => r.setor).concat(saidas.map(s => s.setor), cadSetores)),
       tipos: unique_(records.map(r => r.tipo)),
       sexos: unique_(records.map(r => r.sexo)),
       entrevistadores: unique_(records.map(r => r.entrevistador).concat(cadEnts))
@@ -72,9 +76,12 @@ function saveCadastro(payload) {
   const nome = String(payload.nome || '').trim();
   if (tipo !== 'SETOR' && tipo !== 'ENTREVISTADOR') throw new Error('Tipo inválido.');
   if (!nome) throw new Error('Informe o nome.');
-  const exists = getCadastros().some(c => c.tipo === tipo && c.nome.toUpperCase() === nome.toUpperCase());
+  const exists = getCadastros().some(c => {
+    if (c.tipo !== tipo) return false;
+    return tipo === 'SETOR' ? sectorKey_(c.nome) === sectorKey_(nome) : c.nome.toUpperCase() === nome.toUpperCase();
+  });
   if (exists) throw new Error(tipo === 'SETOR' ? 'Setor já cadastrado.' : 'Entrevistador já cadastrado.');
-  getCadastrosSheet_().appendRow([tipo, nome]);
+  getCadastrosSheet_().appendRow([tipo, tipo === 'SETOR' ? cleanSectorName_(nome) : nome]);
   return { ok: true, message: tipo === 'SETOR' ? 'Setor cadastrado.' : 'Entrevistador cadastrado.' };
 }
 
@@ -103,7 +110,7 @@ function seedCadastros_(sheet) {
   const lastRow = m.getLastRow();
   if (lastRow < FIRST_DATA_ROW) return;
   const n = lastRow - FIRST_DATA_ROW + 1;
-  const setores = unique_(m.getRange(FIRST_DATA_ROW, COL.setor, n, 1).getDisplayValues().flat());
+  const setores = uniqueSectors_(m.getRange(FIRST_DATA_ROW, COL.setor, n, 1).getDisplayValues().flat());
   const ents = unique_(m.getRange(FIRST_DATA_ROW, COL.entrevistador, n, 1).getDisplayValues().flat());
   const rows = setores.map(s => ['SETOR', s]).concat(ents.map(e => ['ENTREVISTADOR', e]));
   if (rows.length) sheet.getRange(2, 1, rows.length, 2).setValues(rows);
@@ -121,8 +128,14 @@ function getSaidas() {
 function saveSaida(payload) {
   const sheet = getSaidasSheet_();
   const isEdit = !!Number(payload.rowNumber);
-  const rowNumber = isEdit ? Number(payload.rowNumber) : sheet.getLastRow() + 1;
-  const mes = payload.mes || '', setor = payload.setor || '', saidas = Number(payload.saidas) || 0;
+  const mes = payload.mes || '', setor = cleanSectorName_(payload.setor), saidas = Number(payload.saidas) || 0;
+  let rowNumber = isEdit ? Number(payload.rowNumber) : 0;
+  if (!rowNumber) {
+    const lastRow = sheet.getLastRow();
+    const rows = lastRow >= SAIDAS_FIRST_ROW ? sheet.getRange(SAIDAS_FIRST_ROW, 1, lastRow - SAIDAS_FIRST_ROW + 1, 3).getDisplayValues() : [];
+    const found = rows.findIndex(row => String(row[0] || '').trim() === mes && sectorKey_(row[1]) === sectorKey_(setor));
+    rowNumber = found >= 0 ? SAIDAS_FIRST_ROW + found : lastRow + 1;
+  }
   sheet.getRange(rowNumber, 1, 1, 3).setValues([[mes, setor, saidas]]);
   return { ok: true, rowNumber, saida: { rowNumber, mes, setor, saidas }, message: isEdit ? 'Saídas atualizadas.' : 'Saídas registradas.' };
 }
@@ -138,18 +151,18 @@ function saveSaidasBatch(payloads) {
   existing.forEach((row, i) => {
     const mes = String(row[0] || '').trim();
     const setor = String(row[1] || '').trim();
-    if (mes && setor) keyToRow[mes + '|' + setor.toLowerCase()] = SAIDAS_FIRST_ROW + i;
+    if (mes && setor) keyToRow[mes + '|' + sectorKey_(setor)] = SAIDAS_FIRST_ROW + i;
   });
 
   const seen = {};
   let nextRow = sheet.getLastRow() + 1;
   const saved = payloads.map(payload => {
     const mes = String(payload.mes || '').trim();
-    const setor = String(payload.setor || '').trim();
+    const setor = cleanSectorName_(payload.setor);
     const saidas = Number(payload.saidas) || 0;
     if (!mes || !setor) throw new Error('Informe mês e setor em todas as saídas.');
     if (saidas < 0) throw new Error('Saídas não podem ser negativas.');
-    const key = mes + '|' + setor.toLowerCase();
+    const key = mes + '|' + sectorKey_(setor);
     if (seen[key]) throw new Error('Há meses repetidos para o mesmo setor.');
     seen[key] = true;
     const requestedRow = Number(payload.rowNumber);
@@ -363,7 +376,7 @@ function objectToRow_(p) {
   row[COL.dn-1] = parseDateOrText_(p.dn);
   // Normalização: evita variações livres (MASC/masculino/fem...) na planilha
   row[COL.sexo-1] = normSexo_(p.sexo);
-  row[COL.setor-1] = String(p.setor || '').trim().toUpperCase();
+  row[COL.setor-1] = cleanSectorName_(p.setor);
   row[COL.tipo-1] = String(p.tipo || '').trim().toUpperCase();
   row[COL.entrevistador-1] = String(p.entrevistador || '').trim().toUpperCase();
   return row;
@@ -390,6 +403,62 @@ function hasContent_(r) {
 
 function unique_(arr) {
   return [...new Set(arr.map(v => String(v || '').trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
+}
+
+function stripAccents_(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function cleanSectorName_(value) {
+  return String(value || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/\s*-\s*/g, ' - ')
+    .toUpperCase();
+}
+
+function sectorKey_(value) {
+  return stripAccents_(cleanSectorName_(value))
+    .replace(/[^A-Z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function sectorNameScore_(value) {
+  const name = cleanSectorName_(value);
+  const accents = (name.match(/[ÁÉÍÓÚÂÊÔÃÕÇ]/g) || []).length;
+  return accents * 10 + (name.includes(' - ') ? 3 : 0) + Math.min(name.length, 80) / 100;
+}
+
+function buildSectorCanonicalMap_(names) {
+  const map = {};
+  names.forEach(name => {
+    const clean = cleanSectorName_(name);
+    const key = sectorKey_(clean);
+    if (!key) return;
+    if (!map[key] || sectorNameScore_(clean) > sectorNameScore_(map[key])) map[key] = clean;
+  });
+  return map;
+}
+
+function canonicalSector_(name, map) {
+  const clean = cleanSectorName_(name);
+  return map[sectorKey_(clean)] || clean;
+}
+
+function uniqueSectors_(arr) {
+  const map = buildSectorCanonicalMap_(arr);
+  return Object.keys(map).map(k => map[k]).sort((a,b) => a.localeCompare(b, 'pt-BR'));
+}
+
+function dedupeSaidas_(saidas, setorMap) {
+  const map = {};
+  saidas.forEach(s => {
+    const setor = canonicalSector_(s.setor, setorMap);
+    const key = String(s.mes || '') + '|' + sectorKey_(setor);
+    if (s.mes && setor) map[key] = Object.assign({}, s, { setor });
+  });
+  return Object.keys(map).map(k => map[k]);
 }
 
 function countRating_(row, rating) {
