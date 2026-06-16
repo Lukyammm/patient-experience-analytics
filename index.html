@@ -998,6 +998,15 @@ const MA=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez
 let ST={records:[],saidas:[],cadastros:[],lookups:{setores:[],tipos:[],sexos:[],entrevistadores:[]}};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const stripAccents=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const cleanSetorName=s=>String(s||'').trim().replace(/\s+/g,' ').replace(/\s*-\s*/g,' - ').toUpperCase();
+const setorKey=s=>stripAccents(cleanSetorName(s)).replace(/[^A-Z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+const setorScore=s=>{const n=cleanSetorName(s);return((n.match(/[ÁÉÍÓÚÂÊÔÃÕÇ]/g)||[]).length*10)+(n.includes(' - ')?3:0)+Math.min(n.length,80)/100};
+function buildSetorMap(names){const map={};(names||[]).forEach(n=>{const clean=cleanSetorName(n),key=setorKey(clean);if(key&&(!map[key]||setorScore(clean)>setorScore(map[key])))map[key]=clean});return map}
+function canonicalSetor(name,map){const clean=cleanSetorName(name);return map[setorKey(clean)]||clean}
+function uniqueSetores(names){const map=buildSetorMap(names);return Object.keys(map).map(k=>map[k]).sort((a,b)=>a.localeCompare(b,'pt-BR'))}
+function sameSetor(a,b){return setorKey(a)===setorKey(b)}
+function dedupeSaidas(saidas,map){const out={};(saidas||[]).forEach(s=>{const setor=canonicalSetor(s.setor,map),key=String(s.mes||'')+'|'+setorKey(setor);if(s.mes&&setor)out[key]=Object.assign({},s,{setor})});return Object.keys(out).map(k=>out[k])}
 
 let _toastTimer=null,_toastQ=[];
 function toast(msg){if($('toast').style.opacity==='1'){_toastQ.push(msg);return;}_showToast(msg);}
@@ -1260,23 +1269,24 @@ function hydrate(){
 function refreshSetores(mes){
   const cs=$('gSetor').value;
   const rr=ST.records.filter(r=>!mes||mo(r)===mes);
-  const sets=[...new Set(rr.map(r=>String(r.setor||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const sets=uniqueSetores(rr.map(r=>r.setor));
   $('gSetor').innerHTML='<option value="">Todos os setores</option>'+sets.map(v=>`<option>${esc(v)}</option>`).join('');
-  if(sets.includes(cs))$('gSetor').value=cs;
+  const match=sets.find(v=>sameSetor(v,cs));
+  if(match)$('gSetor').value=match;
   CS['gSetor']?.refresh();
 }
-function rows(mes,setor){return ST.records.filter(r=>(!mes||mo(r)===mes)&&(!setor||r.setor===setor))}
-function saidas(mes,setor){return ST.saidas.filter(s=>(!mes||s.mes===mes)&&(!setor||s.setor===setor)).reduce((t,x)=>t+x.saidas,0)}
+function rows(mes,setor){return ST.records.filter(r=>(!mes||mo(r)===mes)&&(!setor||sameSetor(r.setor,setor)))}
+function saidas(mes,setor){return ST.saidas.filter(s=>(!mes||s.mes===mes)&&(!setor||sameSetor(s.setor,setor))).reduce((t,x)=>t+x.saidas,0)}
 // Versões que respeitam o período ativo (mês único OU preset de intervalo)
 function scopedRows(setor){
   const mes=$('gMes').value;if(mes)return rows(mes,setor);
   const pmm=periodMonths();
-  return ST.records.filter(r=>(!setor||r.setor===setor)&&(!pmm||pmm.includes(mo(r))));
+  return ST.records.filter(r=>(!setor||sameSetor(r.setor,setor))&&(!pmm||pmm.includes(mo(r))));
 }
 function scopedSaidas(setor){
   const mes=$('gMes').value;if(mes)return saidas(mes,setor);
   const pmm=periodMonths();
-  return ST.saidas.filter(s=>(!setor||s.setor===setor)&&(!pmm||pmm.includes(s.mes))).reduce((t,x)=>t+x.saidas,0);
+  return ST.saidas.filter(s=>(!setor||sameSetor(s.setor,setor))&&(!pmm||pmm.includes(s.mes))).reduce((t,x)=>t+x.saidas,0);
 }
 function periodLabel(){
   const mes=$('gMes').value;if(mes)return ml(mes);
@@ -1380,8 +1390,8 @@ function rDonut(s){
   $('npsLegend').innerHTML=segs.map(([l,v,c])=>`<div style="display:flex;justify-content:space-between;font-size:12px;cursor:pointer" onmouseover="showTooltip('${l}: ${v} (${(v/tot*100).toFixed(0)}%)',event.pageX,event.pageY)" onmouseout="hideTooltip()"><span><span style="display:inline-block;width:7px;height:7px;border-radius:99px;background:${c};margin-right:7px;vertical-align:1px"></span><span style="color:var(--sub)">${l}</span></span><b style="color:var(--ink)">${v}</b></div>`).join('');
 }
 function rSetores(){
-  const map={};adv(scopedRows('')).forEach(r=>{const k=r.setor||'Sem setor';(map[k]=map[k]||[]).push(r)});
-  $('setorBody').innerHTML=Object.entries(map).sort((a,b)=>b[1].length-a[1].length).map(([k,v])=>{
+  const map={};adv(scopedRows('')).forEach(r=>{const label=canonicalSetor(r.setor||'Sem setor',buildSetorMap([r.setor||'Sem setor'])),key=setorKey(label);(map[key]=map[key]||{label,rows:[]}).rows.push(r)});
+  $('setorBody').innerHTML=Object.values(map).sort((a,b)=>b.rows.length-a.rows.length).map(({label:k,rows:v})=>{
     const s=sum(v),sd=scopedSaidas(k),ap=sd?s.total/sd*100:null;
     const fd=s.sat==null?'d-mt':s.sat>=META_S?'d-ok':s.sat>=META_S-10?'d-w':'d-bd';
     const abd=ap!=null&&ap<META_A,sbd=s.sat!=null&&s.sat<META_S;
@@ -1449,7 +1459,7 @@ function renderTable(){
 function rSaidas(){
   const rr=[...ST.saidas].sort((a,b)=>(b.mes+b.setor).localeCompare(a.mes+a.setor));
   $('saidasBody').innerHTML=rr.length?rr.map(s=>{
-    const p=ST.records.filter(r=>mo(r)===s.mes&&r.setor===s.setor).length;
+    const p=ST.records.filter(r=>mo(r)===s.mes&&sameSetor(r.setor,s.setor)).length;
     const ap=s.saidas?p/s.saidas*100:null;
     const cls=ap==null?'d-mt':ap>=META_A?'d-ok':ap>=META_A-10?'d-w':'d-bd';
     return`<tr><td>${ml(s.mes)}</td><td>${esc(s.setor)}</td><td>${s.saidas}</td><td>${p}</td><td><span class="dot ${cls}"></span>${fmt(ap)}</td><td style="white-space:nowrap"><button class="btn" style="padding:3px 9px;font-size:12px" onclick="editSaida(${s.rowNumber})">Editar</button> <button class="btn" style="padding:3px 9px;font-size:12px" onclick="rmSaida(${s.rowNumber})">Excluir</button></td></tr>`;
@@ -1462,7 +1472,8 @@ function avatarColor(nome){let h=0;for(let i=0;i<nome.length;i++)h=(h*31+nome.ch
 function renderCads(){
   const cads=ST.cadastros||[];
   const mk=(tipo,elid,cntid,qid,vazio)=>{
-    const all=cads.filter(c=>c.tipo===tipo);
+    const raw=cads.filter(c=>c.tipo===tipo);
+    const all=tipo==='SETOR'?Object.values(raw.reduce((acc,c)=>{const key=setorKey(c.nome);if(key&&!acc[key])acc[key]=c;return acc},{})):raw;
     $(cntid).textContent=all.length;
     const q=($(qid)?.value||'').trim().toLowerCase();
     const items=all.filter(c=>!q||c.nome.toLowerCase().includes(q)).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
@@ -1488,7 +1499,7 @@ function renderCads(){
 function saveCad(e,tipo){
   e.preventDefault();
   const inp=tipo==='SETOR'?$('cadSetor'):$('cadEnt');
-  const nome=inp.value.trim();if(!nome)return;
+  const nome=tipo==='SETOR'?cleanSetorName(inp.value):inp.value.trim();if(!nome)return;
   load(true);
   google.script.run.withSuccessHandler(res=>{load(false);toast(res.message);inp.value='';reload()}).withFailureHandler(err=>{load(false);toast(err.message||err)}).saveCadastro({tipo,nome});
 }
@@ -1504,9 +1515,9 @@ function inlineAddCad(tipo){
 }
 function closeInlineModal(){$('inlineModal').style.display='none'}
 function confirmInlineAdd(){
-  const nome=$('inlineModalInput').value.trim().toUpperCase();
-  if(!nome)return toast('Informe o nome.');
   const tipo=INLINE_TIPO;
+  const nome=tipo==='SETOR'?cleanSetorName($('inlineModalInput').value):$('inlineModalInput').value.trim().toUpperCase();
+  if(!nome)return toast('Informe o nome.');
   closeInlineModal();
   // Atualização otimista: entra no datalist na hora
   ST.cadastros.push({tipo,nome,rowNumber:'tmp_c'+Date.now()});
@@ -1538,7 +1549,7 @@ function renderReport(){
   if(!mes){out.innerHTML='<div class="empty">Sem dados.</div>';return}
   const rr=adv(ST.records.filter(r=>mo(r)===mes));
   if(!rr.length){out.innerHTML='<div class="empty">Nenhuma pesquisa em '+esc(ml(mes))+(af?' com os filtros ativos':'')+'.</div>';return}
-  const sets=[...new Set(rr.map(r=>r.setor||'SEM SETOR'))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const sets=uniqueSetores(rr.map(r=>r.setor||'SEM SETOR'));
   const sG=sum(rr),sm=ST.saidas.filter(s=>s.mes===mes);
   const tS=sm.reduce((t,x)=>t+x.saidas,0);
   const warnSaidas=!tS?`<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#92400e" class="no-print"><svg style="display:inline;vertical-align:-2px;margin-right:6px" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Saídas de ${esc(ml(mes))} não cadastradas. A % de aplicação não pode ser calculada. <a href="#" onclick="showTab('saidas');return false" style="color:#92400e;font-weight:600">Cadastrar saídas →</a></div>`:'';
@@ -1548,11 +1559,11 @@ function renderReport(){
   <p>Dados quantitativos por setor:</p>
   <table class="summary-table"><thead><tr><th>SETOR</th><th>SAÍDAS</th><th>PESQUISAS APLIC.</th><th>% APLICAÇÃO</th><th>SATISFAÇÃO</th><th>NPS</th></tr></thead><tbody>`;
   const lr=(nm,sd,s,bold)=>{const ap=sd?s.total/sd*100:null;return`<tr${bold?' style="font-weight:700"':''}><td>${esc(nm)}</td><td class="c">${sd||'—'}</td><td class="c">${s.total}</td><td class="c ${ap!=null&&ap<META_A?'pbd':''}">${fmt(ap)}</td><td class="c ${s.sat!=null&&s.sat<META_S?'pbd':''}">${fmt(s.sat)}</td><td class="c">${fmt(s.nps)}</td></tr>`};
-  sets.forEach(st=>{const sr=rr.filter(r=>(r.setor||'SEM SETOR')===st);h+=lr(st,sm.filter(x=>x.setor===st).reduce((t,x)=>t+x.saidas,0),sum(sr))});
+  sets.forEach(st=>{const sr=rr.filter(r=>sameSetor(r.setor||'SEM SETOR',st));h+=lr(st,sm.filter(x=>sameSetor(x.setor,st)).reduce((t,x)=>t+x.saidas,0),sum(sr))});
   h+=lr('HUC',tS,sG,true)+`</tbody></table><p class="fn">*SAÍDAS: altas, transferências externas e óbitos. PORCENTAGEM: score ponderado (ÓTIMO×3+BOM×2+REGULAR×1+RUIM×(−1))÷(válidos×3).</p>`;
   sets.forEach(st=>{
-    const sr=rr.filter(r=>(r.setor||'SEM SETOR')===st),s=sum(sr);
-    const sd=sm.filter(x=>x.setor===st).reduce((t,x)=>t+x.saidas,0),ap=sd?s.total/sd*100:null;
+    const sr=rr.filter(r=>sameSetor(r.setor||'SEM SETOR',st)),s=sum(sr);
+    const sd=sm.filter(x=>sameSetor(x.setor,st)).reduce((t,x)=>t+x.saidas,0),ap=sd?s.total/sd*100:null;
     h+=`<h3>${esc(st)}</h3><p>No setor ${esc(st)}, ${sd?`ocorreram ${sd} saídas, com `:''}${s.total} pesquisas realizadas${ap!=null?`, totalizando ${fmt(ap)} de aplicação`:''}. Satisfação de ${fmt(s.sat)}.${s.nps!=null?` NPS de ${fmt(s.nps)}, ${zona(s.nps)}.`:''} Respondidas pelo paciente, acompanhante ou de forma colaborativa.</p>`;
     BLOCKS.forEach(([,titulo,crit,manif])=>{
       h+=`<h4>${titulo}</h4><table class="criteria-table"><thead><tr><th>CRITÉRIOS AVALIADOS</th><th>ÓTIMO</th><th>BOM</th><th>REGULAR</th><th>RUIM</th><th>N/A</th><th>TOTAL</th><th>PORCENTAGEM</th></tr></thead><tbody>`;
@@ -1569,7 +1580,7 @@ function renderReport(){
     });
   });
   // Gráfico 1: Satisfação e NPS por setor (incl. total HUC)
-  const gSet=sets.map(st=>{const s=sum(rr.filter(r=>(r.setor||'SEM SETOR')===st));return{label:st,values:[s.sat,s.nps]}});
+  const gSet=sets.map(st=>{const s=sum(rr.filter(r=>sameSetor(r.setor||'SEM SETOR',st)));return{label:st,values:[s.sat,s.nps]}});
   gSet.push({label:'TOTAL',values:[sG.sat,sG.nps]});
   h+=svgBarChart('SATISFAÇÃO E NPS POR SETOR',gSet);
   // Gráfico 2: Série histórica mensal do ano (respeita filtros avançados)
@@ -1795,6 +1806,14 @@ let PENDING=[];
 function applyData(data){
   ST=data;ST.records=ST.records||[];ST.saidas=ST.saidas||[];ST.cadastros=ST.cadastros||[];
   ST.lookups=ST.lookups||{};ST.lookups.entrevistadores=ST.lookups.entrevistadores||[];
+  const setorMap=buildSetorMap(
+    ST.records.map(r=>r.setor)
+      .concat(ST.saidas.map(s=>s.setor),ST.lookups.setores||[],ST.cadastros.filter(c=>c.tipo==='SETOR').map(c=>c.nome))
+  );
+  ST.records=ST.records.map(r=>Object.assign({},r,{setor:canonicalSetor(r.setor,setorMap)}));
+  ST.saidas=dedupeSaidas(ST.saidas,setorMap);
+  ST.cadastros=ST.cadastros.map(c=>c.tipo==='SETOR'?Object.assign({},c,{nome:canonicalSetor(c.nome,setorMap)}):c);
+  ST.lookups.setores=uniqueSetores((ST.lookups.setores||[]).concat(ST.records.map(r=>r.setor),ST.saidas.map(s=>s.setor)));
   PENDING.forEach(rec=>{if(!ST.records.some(x=>x.rowNumber===rec.rowNumber))ST.records.push(rec)});
   try{localStorage.setItem('psq2',JSON.stringify(ST))}catch(e){}
 }
@@ -1814,6 +1833,7 @@ function reload(){
 function saveRecord(e){
   e.preventDefault();
   const payload=getForm();
+  payload.setor=cleanSetorName(payload.setor);
 
   // Validação: campos obrigatórios
   const errors=[];
@@ -1954,7 +1974,7 @@ function resetSaidaForm(){
   addSaidaRow();
 }
 function saidaFormPayloads(){
-  const setor=$('sSetor').value.trim();
+  const setor=cleanSetorName($('sSetor').value);
   if(!setor){toast('Informe o setor.');return null}
   const seen=new Set(),payloads=[];
   for(const row of document.querySelectorAll('#saidaRows .saida-row')){
