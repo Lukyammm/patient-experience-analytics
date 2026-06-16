@@ -1,18 +1,26 @@
 const SHEET_NAME = 'MATRIZ';
 const FIRST_DATA_ROW = 5;
-const LAST_COL = 43; // A:AQ
+const LAST_COL = 48; // A:AV
 const SAIDAS_SHEET = 'SAIDAS';
 const SAIDAS_FIRST_ROW = 2;
 const CADASTROS_SHEET = 'CADASTROS';
 
+// Cada bloco tem suas 4 manifestações (Sugestões/Reclamações/Comentários/Elogios)
 const COL = {
   setor:1, pront:2, data:3, tipo:4, dn:5, idade:6, sexo:7,
-  gentilezaAcolhimento:8, agilidade:9, clareza:10, satisfacao1:11, obsAcolhimento:12,
-  gentilezaAssistencia:13, identificacao:14, intimidade:15, horarioDescanso:16, esclarecimento:17, cuidados:18, confianca:19, satisfacao2:20, obsAssistencia:21,
-  acesso:22, acomodacao:23, limpeza:24, enxoval:25, alimentacao:26, locomocao:27, satisfacao3:28, obsServicos:29,
-  sugestoes:30, reclamacoes:31, comentarios:32, elogios:33, nps:34, entrevistador:35,
-  otimo:36, bom:37, regular:38, ruim:39, na:40, totalConsiderado:41, taxaSatisfacao:42, encaminhamentos:43
+  gentilezaAcolhimento:8, agilidade:9, clareza:10, satisfacao1:11, sugestoesAcol:12, reclamacoesAcol:13, comentariosAcol:14, elogiosAcol:15,
+  gentilezaAssistencia:16, identificacao:17, intimidade:18, horarioDescanso:19, esclarecimento:20, cuidados:21, confianca:22, satisfacao2:23, sugestoesAssist:24, reclamacoesAssist:25, comentariosAssist:26, elogiosAssist:27,
+  acesso:28, acomodacao:29, limpeza:30, enxoval:31, alimentacao:32, locomocao:33, satisfacao3:34, sugestoesServ:35, reclamacoesServ:36, comentariosServ:37, elogiosServ:38,
+  nps:39, entrevistador:40,
+  otimo:41, bom:42, regular:43, ruim:44, na:45, totalConsiderado:46, taxaSatisfacao:47, encaminhamentos:48
 };
+
+// Campos de manifestação por bloco (ordem de exibição: Sugestões, Reclamações, Comentários, Elogios)
+const MANIF_KEYS = [
+  'sugestoesAcol','reclamacoesAcol','comentariosAcol','elogiosAcol',
+  'sugestoesAssist','reclamacoesAssist','comentariosAssist','elogiosAssist',
+  'sugestoesServ','reclamacoesServ','comentariosServ','elogiosServ'
+];
 
 const RATING_KEYS = [
   'gentilezaAcolhimento','agilidade','clareza','gentilezaAssistencia','identificacao','intimidade','horarioDescanso','esclarecimento','cuidados','confianca','acesso','acomodacao','limpeza','enxoval','alimentacao','locomocao'
@@ -150,44 +158,10 @@ function saveRecord(payload) {
   ensureHeader_(sheet);
   const isEdit = !!Number(payload.rowNumber);
   const rowNumber = isEdit ? Number(payload.rowNumber) : nextDataRow_(sheet);
-  const row = objectToRow_(payload);
-
-  // Compute aggregate counts from payload (avoids 13+ separate formula API calls)
-  const cnt = v => RATING_KEYS.reduce((n, k) => n + (String(payload[k] || '').toUpperCase() === v ? 1 : 0), 0);
-  const otimo = cnt('ÓTIMO'), bom = cnt('BOM'), reg = cnt('REGULAR'), ruim = cnt('RUIM'), na = cnt('N/A');
-  const total = otimo + bom + reg + ruim;
-  row[COL.otimo - 1] = otimo;
-  row[COL.bom - 1] = bom;
-  row[COL.regular - 1] = reg;
-  row[COL.ruim - 1] = ruim;
-  row[COL.na - 1] = na;
-  row[COL.totalConsiderado - 1] = total;
-  row[COL.taxaSatisfacao - 1] = total ? (otimo + bom) / total : 0;
-
-  // Sub-taxas por bloco (colunas K, T, AA — SATISFAÇÃO I/II/III)
-  const blockSat = keys => {
-    let ob = 0, valid = 0;
-    keys.forEach(k => {
-      const v = String(payload[k] || '').toUpperCase();
-      if (v === 'ÓTIMO' || v === 'BOM') { ob++; valid++; }
-      else if (v === 'REGULAR' || v === 'RUIM') valid++;
-    });
-    return valid ? ob / valid : 0;
-  };
-  row[COL.satisfacao1 - 1] = blockSat(BLOCO_ACOLHIMENTO);
-  row[COL.satisfacao2 - 1] = blockSat(BLOCO_ASSISTENCIA);
-  row[COL.satisfacao3 - 1] = blockSat(BLOCO_SERVICOS);
-
-  // Calcula idade a partir da data de nascimento e a data da pesquisa
-  const dnD = parseDateOrText_(payload.dn);
-  const dtD = parseDateOrText_(payload.data);
-  if (dnD instanceof Date && dtD instanceof Date) {
-    const age = Math.floor((dtD - dnD) / 31557600000);
-    if (age >= 0 && age <= 120) row[COL.idade - 1] = age;
-  }
+  const row = computeRow_(payload);
 
   sheet.getRange(rowNumber, 1, 1, LAST_COL).setValues([row]);
-  sheet.getRangeList([`K${rowNumber}`, `T${rowNumber}`, `AB${rowNumber}`, `AP${rowNumber}`]).setNumberFormat('0.00%');
+  sheet.getRangeList(pctCols_().map(c => c + rowNumber)).setNumberFormat('0.00%');
 
   const saved = rowToObject_(row.map(v => v === '' ? '' : String(v)), rowNumber);
   // row contém Date objects para campos de data; String(Date) produz formato ilegível.
@@ -230,9 +204,17 @@ function deleteRecord(rowNumber) {
 
 function exportCsv() {
   const data = getInitialData().records;
-  const headers = ['Data','Setor','Prontuario','Tipo','DN','Idade','Sexo','Satisfacao %','NPS','Classificacao NPS','Sugestoes','Reclamacoes','Comentarios','Elogios','Entrevistador','Encaminhamentos'];
+  const headers = ['Data','Setor','Prontuario','Tipo','DN','Idade','Sexo','Satisfacao %','NPS','Classificacao NPS',
+    'Acolhimento Sugestoes','Acolhimento Reclamacoes','Acolhimento Comentarios','Acolhimento Elogios',
+    'Assistencia Sugestoes','Assistencia Reclamacoes','Assistencia Comentarios','Assistencia Elogios',
+    'Servicos Sugestoes','Servicos Reclamacoes','Servicos Comentarios','Servicos Elogios',
+    'Entrevistador','Encaminhamentos'];
   const lines = [headers].concat(data.map(r => [
-    r.data, r.setor, r.pront, r.tipo, r.dn, r.idade, r.sexo, r.taxaSatisfacao, r.nps, classifyNps_(r.nps), r.sugestoes, r.reclamacoes, r.comentarios, r.elogios, r.entrevistador, r.encaminhamentos
+    r.data, r.setor, r.pront, r.tipo, r.dn, r.idade, r.sexo, r.taxaSatisfacao, r.nps, classifyNps_(r.nps),
+    r.sugestoesAcol, r.reclamacoesAcol, r.comentariosAcol, r.elogiosAcol,
+    r.sugestoesAssist, r.reclamacoesAssist, r.comentariosAssist, r.elogiosAssist,
+    r.sugestoesServ, r.reclamacoesServ, r.comentariosServ, r.elogiosServ,
+    r.entrevistador, r.encaminhamentos
   ])).map(row => row.map(csvCell_).join(';'));
   return lines.join('\n');
 }
@@ -245,16 +227,76 @@ function getSheet_() {
 }
 
 function ensureHeader_(sheet) {
-  if (sheet.getLastColumn() >= LAST_COL && sheet.getRange('A2').getValue() === 'SETOR') return;
+  const a2 = sheet.getRange('A2').getValue();
+  const l3 = sheet.getRange('L3').getValue();
+  if (a2 === 'SETOR' && l3 === 'SUGESTÕES') return;                    // layout novo já presente
+  if (a2 === 'SETOR' && sheet.getLastRow() >= FIRST_DATA_ROW) return;  // layout antigo COM dados — rodar migrateToBlockManifestations()
+  writeHeader_(sheet);
+}
+
+// Escreve as linhas de cabeçalho (1-3) montando a partir do COL — evita contagem manual de colunas
+function writeHeader_(sheet) {
+  const row2 = Array(LAST_COL).fill(''), row3 = Array(LAST_COL).fill('');
+  const p2 = (k, v) => row2[COL[k] - 1] = v, p3 = (k, v) => row3[COL[k] - 1] = v;
+  // Linha 2 — grupos
+  p2('setor','SETOR'); p2('pront','PRONT'); p2('data','DATA'); p2('tipo','TIPO'); p2('dn','DN'); p2('idade','IDADE'); p2('sexo','SEXO');
+  p2('gentilezaAcolhimento','1. ACOLHIMENTO');
+  p2('gentilezaAssistencia','2. ASSISTÊNCIA');
+  p2('acesso','3. SERVIÇOS PRESTADOS');
+  p2('nps','NPS'); p2('entrevistador','ENTREVISTADOR'); p2('otimo','TABULAÇÃO DOS DADOS'); p2('encaminhamentos','ENCAMINHAMENTOS');
+  // Linha 3 — colunas detalhadas
+  p3('gentilezaAcolhimento','GENTILEZA E ATENÇÃO'); p3('agilidade','AGILIDADE'); p3('clareza','CLAREZA'); p3('satisfacao1','SATISFAÇÃO I');
+  p3('sugestoesAcol','SUGESTÕES'); p3('reclamacoesAcol','RECLAMAÇÕES'); p3('comentariosAcol','COMENTÁRIOS'); p3('elogiosAcol','ELOGIOS');
+  p3('gentilezaAssistencia','GENTILEZA E ATENÇÃO'); p3('identificacao','IDENTIFICAÇÃO'); p3('intimidade','INTIMIDADE/PRIVACIDADE'); p3('horarioDescanso','HORÁRIO DE DESCANSO'); p3('esclarecimento','ESCLARECIMENTO'); p3('cuidados','CUIDADOS PRESTADOS'); p3('confianca','CONFIANÇA E SEGURANÇA'); p3('satisfacao2','SATISFAÇÃO II');
+  p3('sugestoesAssist','SUGESTÕES'); p3('reclamacoesAssist','RECLAMAÇÕES'); p3('comentariosAssist','COMENTÁRIOS'); p3('elogiosAssist','ELOGIOS');
+  p3('acesso','ACESSO'); p3('acomodacao','ACOMODAÇÃO'); p3('limpeza','LIMPEZA'); p3('enxoval','ENXOVAL'); p3('alimentacao','ALIMENTAÇÃO'); p3('locomocao','LOCOMOÇÃO'); p3('satisfacao3','SATISFAÇÃO III');
+  p3('sugestoesServ','SUGESTÕES'); p3('reclamacoesServ','RECLAMAÇÕES'); p3('comentariosServ','COMENTÁRIOS'); p3('elogiosServ','ELOGIOS');
+  p3('otimo','ÓTIMO'); p3('bom','BOM'); p3('regular','REGULAR'); p3('ruim','RUIM'); p3('na','N/A'); p3('totalConsiderado','TOTAL CONSIDERADO'); p3('taxaSatisfacao','TAXA DE SATISFAÇÃO');
   sheet.getRange('B1').setValue('PESQUISA DE SATISFAÇÃO');
-  sheet.getRange(2,1,1,LAST_COL).setValues([[
-    'SETOR','PRONT','DATA','TIPO','DN','IDADE','SEXO','1. ACOLHIMENTO','','','','','2. ASSISTÊNCIA','','','','','','','','','3. SERVIÇOS PRESTADOS','','','','','','','MANIFESTAÇÕES','','','','NPS','ENTREVISTADOR','TABULAÇÃO DOS DADOS','','','','','','ENCAMINHAMENTOS'
-  ]]);
-  sheet.getRange(3,1,1,LAST_COL).setValues([[
-    '','','','','','','','GENTILEZA E ATENÇÃO','AGILIDADE','CLAREZA','SATISFAÇÃO I','OBSERVAÇÕES','GENTILEZA E ATENÇÃO','IDENTIFICAÇÃO','INTIMIDADE/PRIVACIDADE','HORÁRIO DE DESCANSO','ESCLARECIMENTO','CUIDADOS PRESTADOS','CONFIANÇA E SEGURANÇA','SATISFAÇÃO II','OBSERVAÇÕES','ACESSO','ACOMODAÇÃO','LIMPEZA','ENXOVAL','ALIMENTAÇÃO','LOCOMOÇÃO','SATISFAÇÃO III','OBSERVAÇÕES','SUGESTÕES','RECLAMAÇÕES','COMENTÁRIOS','ELOGIOS','','','ÓTIMO','BOM','REGULAR','RUIM','N/A','TOTAL CONSIDERADO','TAXA DE SATISFAÇÃO',''
-  ]]);
-  sheet.getRange('A1:AQ3').setFontWeight('bold').setBackground('#eaf2ff');
+  sheet.getRange(2, 1, 1, LAST_COL).setValues([row2]);
+  sheet.getRange(3, 1, 1, LAST_COL).setValues([row3]);
+  sheet.getRange(1, 1, 3, LAST_COL).setFontWeight('bold').setBackground('#eaf2ff');
   sheet.setFrozenRows(3);
+}
+
+// Letra(s) da coluna A1 a partir do índice (1 -> A, 27 -> AA)
+function colA1_(n) { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = (n - m - 1) / 26; } return s; }
+
+// Colunas formatadas como porcentagem (sub-taxas por bloco + taxa geral)
+function pctCols_() { return [COL.satisfacao1, COL.satisfacao2, COL.satisfacao3, COL.taxaSatisfacao].map(colA1_); }
+
+// Monta a linha completa da planilha (campos + agregados + sub-taxas + idade) a partir do payload
+function computeRow_(payload) {
+  const row = objectToRow_(payload);
+  const cnt = v => RATING_KEYS.reduce((n, k) => n + (String(payload[k] || '').toUpperCase() === v ? 1 : 0), 0);
+  const otimo = cnt('ÓTIMO'), bom = cnt('BOM'), reg = cnt('REGULAR'), ruim = cnt('RUIM'), na = cnt('N/A');
+  const total = otimo + bom + reg + ruim;
+  row[COL.otimo - 1] = otimo;
+  row[COL.bom - 1] = bom;
+  row[COL.regular - 1] = reg;
+  row[COL.ruim - 1] = ruim;
+  row[COL.na - 1] = na;
+  row[COL.totalConsiderado - 1] = total;
+  row[COL.taxaSatisfacao - 1] = total ? (otimo + bom) / total : 0;
+  const blockSat = keys => {
+    let ob = 0, valid = 0;
+    keys.forEach(k => {
+      const v = String(payload[k] || '').toUpperCase();
+      if (v === 'ÓTIMO' || v === 'BOM') { ob++; valid++; }
+      else if (v === 'REGULAR' || v === 'RUIM') valid++;
+    });
+    return valid ? ob / valid : 0;
+  };
+  row[COL.satisfacao1 - 1] = blockSat(BLOCO_ACOLHIMENTO);
+  row[COL.satisfacao2 - 1] = blockSat(BLOCO_ASSISTENCIA);
+  row[COL.satisfacao3 - 1] = blockSat(BLOCO_SERVICOS);
+  const dnD = parseDateOrText_(payload.dn);
+  const dtD = parseDateOrText_(payload.data);
+  if (dnD instanceof Date && dtD instanceof Date) {
+    const age = Math.floor((dtD - dnD) / 31557600000);
+    if (age >= 0 && age <= 120) row[COL.idade - 1] = age;
+  }
+  return row;
 }
 
 function rowToObject_(row, rowNumber) {
@@ -304,7 +346,7 @@ function nextDataRow_(sheet) {
 }
 
 function hasContent_(r) {
-  return ['setor','pront','data','tipo','sexo','nps','sugestoes','reclamacoes','comentarios','elogios'].some(k => String(r[k] || '').trim());
+  return ['setor','pront','data','tipo','sexo','nps'].concat(MANIF_KEYS).some(k => String(r[k] || '').trim());
 }
 
 function unique_(arr) {
@@ -403,15 +445,15 @@ function backfillSatisfacaoBlocks() {
     let changed = false;
     if (isEmpty(s1)) {
       const v = blockSatFromRow(row, BLOCO_ACOLHIMENTO);
-      if (v !== null) { row[COL.satisfacao1 - 1] = v; rangeListAddrs.push(`K${rowNum}`); changed = true; }
+      if (v !== null) { row[COL.satisfacao1 - 1] = v; rangeListAddrs.push(colA1_(COL.satisfacao1) + rowNum); changed = true; }
     }
     if (isEmpty(s2)) {
       const v = blockSatFromRow(row, BLOCO_ASSISTENCIA);
-      if (v !== null) { row[COL.satisfacao2 - 1] = v; rangeListAddrs.push(`T${rowNum}`); changed = true; }
+      if (v !== null) { row[COL.satisfacao2 - 1] = v; rangeListAddrs.push(colA1_(COL.satisfacao2) + rowNum); changed = true; }
     }
     if (isEmpty(s3)) {
       const v = blockSatFromRow(row, BLOCO_SERVICOS);
-      if (v !== null) { row[COL.satisfacao3 - 1] = v; rangeListAddrs.push(`AB${rowNum}`); changed = true; }
+      if (v !== null) { row[COL.satisfacao3 - 1] = v; rangeListAddrs.push(colA1_(COL.satisfacao3) + rowNum); changed = true; }
     }
 
     if (changed) {
@@ -425,6 +467,94 @@ function backfillSatisfacaoBlocks() {
   }
 
   const msg = `backfillSatisfacaoBlocks: ${updated} linha(s) atualizada(s).`;
+  Logger.log(msg);
+  return msg;
+}
+
+/**
+ * MIGRAÇÃO ÚNICA — converte o layout antigo (1 "OBSERVAÇÕES" por bloco + grupo único de
+ * MANIFESTAÇÕES) para o novo (Sugestões/Reclamações/Comentários/Elogios em CADA bloco).
+ *
+ * Regras:
+ *   - OBSERVAÇÕES de cada bloco  -> "Comentários" do mesmo bloco
+ *   - Manifestações globais antigas (Sugestões/Reclamações/Comentários/Elogios) -> bloco 1 (Acolhimento)
+ *   - No Acolhimento, a observação antiga e o comentário global são concatenados (sem perder nada)
+ *
+ * Segurança: faz uma cópia de backup da aba ANTES de reescrever, e aborta se já migrado.
+ * Execute UMA única vez pelo editor de script: Funções > migrateToBlockManifestations
+ */
+function migrateToBlockManifestations() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) { const m = 'Aba MATRIZ não encontrada.'; Logger.log(m); return m; }
+
+  // Já migrado? (col 12 / L na linha 3 já é "SUGESTÕES" no layout novo)
+  if (sheet.getRange('A2').getValue() === 'SETOR' && sheet.getRange('L3').getValue() === 'SUGESTÕES') {
+    const m = 'Migração já aplicada anteriormente — nada a fazer.'; Logger.log(m); return m;
+  }
+  // Confere o layout antigo esperado antes de mexer
+  if (sheet.getRange('A2').getValue() !== 'SETOR' || sheet.getRange('L3').getValue() !== 'OBSERVAÇÕES') {
+    const m = 'Cabeçalho não corresponde ao layout antigo esperado (A2=SETOR, L3=OBSERVAÇÕES). Abortando por segurança.';
+    Logger.log(m); return m;
+  }
+
+  // Mapa de colunas do layout ANTIGO (snapshot fixo para leitura)
+  const OLD_COL = {
+    setor:1, pront:2, data:3, tipo:4, dn:5, idade:6, sexo:7,
+    gentilezaAcolhimento:8, agilidade:9, clareza:10, satisfacao1:11, obsAcolhimento:12,
+    gentilezaAssistencia:13, identificacao:14, intimidade:15, horarioDescanso:16, esclarecimento:17, cuidados:18, confianca:19, satisfacao2:20, obsAssistencia:21,
+    acesso:22, acomodacao:23, limpeza:24, enxoval:25, alimentacao:26, locomocao:27, satisfacao3:28, obsServicos:29,
+    sugestoes:30, reclamacoes:31, comentarios:32, elogios:33, nps:34, entrevistador:35,
+    otimo:36, bom:37, regular:38, ruim:39, na:40, totalConsiderado:41, taxaSatisfacao:42, encaminhamentos:43
+  };
+  const OLD_LAST_COL = 43;
+
+  const lastRow = sheet.getLastRow();
+  const numRows = Math.max(0, lastRow - FIRST_DATA_ROW + 1);
+  const oldValues = numRows ? sheet.getRange(FIRST_DATA_ROW, 1, numRows, OLD_LAST_COL).getDisplayValues() : [];
+
+  // Backup ANTES de qualquer escrita
+  const stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'America/Fortaleza', 'yyyyMMdd_HHmmss');
+  const backup = sheet.copyTo(ss).setName('MATRIZ_BACKUP_' + stamp);
+
+  const get = (row, key) => row[OLD_COL[key] - 1] || '';
+  const merge = (a, b) => [a, b].map(s => String(s || '').trim()).filter(Boolean).join('\n');
+
+  const newRows = [];
+  oldValues.forEach(row => {
+    const anyManif = ['sugestoes','reclamacoes','comentarios','elogios','obsAcolhimento','obsAssistencia','obsServicos']
+      .some(k => String(get(row, k) || '').trim());
+    const anyBase = ['setor','pront','data','tipo','sexo','nps'].some(k => String(get(row, k) || '').trim());
+    const anyRating = RATING_KEYS.some(k => String(get(row, k) || '').trim());
+    if (!anyManif && !anyBase && !anyRating) return; // linha vazia
+
+    const p = {};
+    ['setor','pront','tipo','sexo','idade','nps','entrevistador','encaminhamentos'].forEach(k => p[k] = get(row, k));
+    p.data = normalizeDate_(get(row, 'data'));
+    p.dn = normalizeDate_(get(row, 'dn'));
+    RATING_KEYS.forEach(k => p[k] = get(row, k));
+    // Manifestações por bloco
+    p.sugestoesAcol   = get(row, 'sugestoes');
+    p.reclamacoesAcol = get(row, 'reclamacoes');
+    p.comentariosAcol = merge(get(row, 'obsAcolhimento'), get(row, 'comentarios'));
+    p.elogiosAcol     = get(row, 'elogios');
+    p.comentariosAssist = get(row, 'obsAssistencia');
+    p.comentariosServ   = get(row, 'obsServicos');
+    newRows.push(computeRow_(p));
+  });
+
+  // Reescreve a aba no layout novo
+  sheet.clear();
+  writeHeader_(sheet);
+  if (newRows.length) {
+    sheet.getRange(FIRST_DATA_ROW, 1, newRows.length, LAST_COL).setValues(newRows);
+    const addrs = [];
+    const cols = pctCols_();
+    for (let i = 0; i < newRows.length; i++) { const r = FIRST_DATA_ROW + i; cols.forEach(c => addrs.push(c + r)); }
+    if (addrs.length) sheet.getRangeList(addrs).setNumberFormat('0.00%');
+  }
+
+  const msg = `Migração concluída: ${newRows.length} registro(s) convertido(s). Backup salvo em "${backup.getName()}".`;
   Logger.log(msg);
   return msg;
 }
