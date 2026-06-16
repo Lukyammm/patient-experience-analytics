@@ -355,9 +355,10 @@
     .tbl-card-actions{display:flex;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--s4)}
     .tbl-card-actions button{flex:1;padding:8px 12px!important;font-size:12px!important}
     .saida-rows{display:grid;gap:8px}
-    .saida-row{display:grid;grid-template-columns:1fr 96px 30px;gap:8px;align-items:end}
+    .saida-row{display:grid;grid-template-columns:minmax(0,1fr) 82px 30px;gap:8px;align-items:end}
     .saida-row .btn-g{height:38px;padding:0!important;font-size:18px!important;line-height:1}
     .saida-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .saida-actions .btn{flex:1 1 125px;justify-content:center}
 
     /* ══ Responsivo ══ */
     /* Tablet */
@@ -393,7 +394,7 @@
       .g4{grid-template-columns:1fr 1fr!important}
       .nps{gap:3px}
       .npsleg{font-size:9.5px}
-      .saida-row{grid-template-columns:1fr 86px 30px}
+      .saida-row{grid-template-columns:minmax(0,1fr) 78px 30px}
     }
     @media(max-width:420px){.g4{grid-template-columns:1fr!important}}
     /* ── Card section headers (form sections only, not report) ── */
@@ -788,7 +789,7 @@
       <div class="ph">
         <div><h2 class="pt">Saídas hospitalares</h2><p class="text-xs text-mut mt-0.5">Altas, transferências e óbitos · base da % de aplicação</p></div>
       </div>
-      <div class="grid g-saida gap-3" style="grid-template-columns:290px 1fr;align-items:start">
+      <div class="grid g-saida gap-3" style="grid-template-columns:minmax(340px,360px) 1fr;align-items:start">
         <form class="card" id="formSaida" onsubmit="saveSaida(event)">
           <h4 class="text-xs font-semibold uppercase tracking-widest text-mut mb-1">Registrar saídas</h4>
           <p class="text-xs text-mut mb-4">Informe um setor e lance vários meses de uma vez.</p>
