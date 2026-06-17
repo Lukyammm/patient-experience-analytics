@@ -226,25 +226,41 @@ function saveRecord(payload) {
   }
 }
 
-// Importação em lote (CSV digitalizado): reaproveita saveRecord para cada linha
+// Importação em lote (CSV digitalizado): calcula tudo e grava em blocos.
 function importRecords(payloads) {
   if (!Array.isArray(payloads) || !payloads.length) throw new Error('Nada para importar.');
   if (payloads.length > 500) throw new Error('Máximo de 500 pesquisas por importação.');
-  let saved = 0;
-  const errors = [];
-  payloads.forEach((p, i) => {
-    try {
-      p.rowNumber = '';
-      saveRecord(p);
-      saved++;
-    } catch (e) {
-      errors.push('Registro ' + (i + 1) + ': ' + (e && e.message ? e.message : e));
-    }
-  });
-  return {
-    ok: true, saved, errors,
-    message: saved + ' pesquisa(s) importada(s)' + (errors.length ? ' · ' + errors.length + ' com erro' : '') + '.'
-  };
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) throw new Error('Sistema ocupado, tente novamente em instantes.');
+  try {
+    const sheet = getSheet_();
+    ensureHeader_(sheet);
+    const targetRows = nextDataRows_(sheet, payloads.length);
+    const rowsToSave = [];
+    const errors = [];
+
+    payloads.forEach((payload, i) => {
+      try {
+        const cleanPayload = Object.assign({}, payload, { rowNumber: '' });
+        rowsToSave.push({
+          rowNumber: targetRows[rowsToSave.length],
+          row: computeRow_(cleanPayload)
+        });
+      } catch (e) {
+        errors.push('Registro ' + (i + 1) + ': ' + (e && e.message ? e.message : e));
+      }
+    });
+
+    writeRowRuns_(sheet, rowsToSave);
+    return {
+      ok: true,
+      saved: rowsToSave.length,
+      errors,
+      message: rowsToSave.length + ' pesquisa(s) importada(s)' + (errors.length ? ' · ' + errors.length + ' com erro' : '') + '.'
+    };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function deleteRecord(rowNumber) {
@@ -395,6 +411,43 @@ function nextDataRow_(sheet) {
   const vals = last >= FIRST_DATA_ROW ? sheet.getRange(FIRST_DATA_ROW, 1, last - FIRST_DATA_ROW + 1, 1).getValues().flat() : [];
   const idx = vals.findIndex(v => !v);
   return idx >= 0 ? FIRST_DATA_ROW + idx : last + 1;
+}
+
+function nextDataRows_(sheet, count) {
+  const last = Math.max(sheet.getLastRow(), FIRST_DATA_ROW - 1);
+  const rows = [];
+  if (last >= FIRST_DATA_ROW) {
+    const vals = sheet.getRange(FIRST_DATA_ROW, 1, last - FIRST_DATA_ROW + 1, 1).getValues().flat();
+    vals.forEach((v, i) => {
+      if (rows.length < count && !v) rows.push(FIRST_DATA_ROW + i);
+    });
+  }
+  let next = last + 1;
+  while (rows.length < count) rows.push(next++);
+  return rows;
+}
+
+function writeRowRuns_(sheet, entries) {
+  if (!entries.length) return;
+  let start = entries[0].rowNumber;
+  let values = [entries[0].row];
+  const pctCols = [COL.satisfacao1, COL.satisfacao2, COL.satisfacao3, COL.taxaSatisfacao];
+  const flush = () => {
+    sheet.getRange(start, 1, values.length, LAST_COL).setValues(values);
+    pctCols.forEach(col => sheet.getRange(start, col, values.length, 1).setNumberFormat('0.00%'));
+  };
+
+  for (let i = 1; i < entries.length; i++) {
+    const entry = entries[i];
+    if (entry.rowNumber === start + values.length) {
+      values.push(entry.row);
+    } else {
+      flush();
+      start = entry.rowNumber;
+      values = [entry.row];
+    }
+  }
+  flush();
 }
 
 function hasContent_(r) {
