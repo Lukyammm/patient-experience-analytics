@@ -2178,7 +2178,10 @@ function confirmCsvImport(){
     .withSuccessHandler(res=>{
       load(false);closeCsvImport();
       toast(res.message||'Importação concluída.');
-      google.script.run.withSuccessHandler(data=>{applyData(data);hydrate();renderAll()}).getInitialData();
+      google.script.run
+        .withSuccessHandler(data=>{applyData(data);hydrate();renderAll()})
+        .withFailureHandler(err=>toast('Importação concluída, mas não foi possível atualizar a tela: '+(err.message||err)))
+        .getInitialData();
     })
     .withFailureHandler(err=>{
       load(false);b.disabled=false;updateCsvBtn();
