@@ -28,6 +28,12 @@ This project was developed to solve real operational problems using web technolo
 
 The goal of this project is to improve operational efficiency, reduce manual work, and support better decision-making through automation and clear data visualization.
 
+## Demo guide image
+
+> Demonstrative image with fictitious data, created only to guide the project presentation.
+
+![Patient Satisfaction Survey System overview](./docs/screenshots/overview.svg)
+
 ## Manifestações por bloco
 
 As manifestações (Sugestões, Reclamações, Comentários, Elogios) existem **dentro de cada bloco**: Acolhimento, Assistência e Serviços.
